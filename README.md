@@ -52,15 +52,5 @@ Run `./exp/validation.sh`
 Qualitative results of our method on Abd-CT and Abd-MRI.
 </div> 
 
-## Citation
-Please cite the paper if you use the code.
-```bibtex
-@article{lin2023few,
-  title={Few Shot Medical Image Segmentation with Cross Attention Transformer},
-  author={Lin, Yi and Chen, Yufan and Cheng, Kwang-Ting and Chen, Hao},
-  journal={arXiv preprint arXiv:2303.13867},
-  year={2023}}
-```
-
 ## Acknowledgment 
 This code is based on [Q-Net](https://github.com/zjlab-ammi/q-net), [PFENet](https://github.com/dvlab-research/PFENet), thanks for their excellent work!
