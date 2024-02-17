@@ -25,11 +25,11 @@ pip install -r requirements.txt
 
 ### Data preparation
 For training and inference, please download the following datasets to your own path.
-#### Training data
+#### Training datasets
 1. **Synthetic:**  [PubChem](https://www.synapse.org/#!Synapse:syn3193805/wiki/217789)
 2. **Realistic:**  [USPTO](https://chaos.grand-challenge.org/)  
 
-#### Testing dataset
+#### Testing datasets
 1. **Synthetic:**  [Indigo, ChemDraw](https://www.synapse.org/#!Synapse:syn3193805/wiki/217789)
 2. **Realistic:**  [CLEF, UOB, USPTO, Staker, ACS](https://chaos.grand-challenge.org/)  
 3. **Perturbed by img transform:** [CLEF, UOB, USPTO, Staker, ACS](https://chaos.grand-challenge.org/) 
