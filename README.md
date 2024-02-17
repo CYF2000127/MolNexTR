@@ -60,7 +60,6 @@ We also show some qualitative results of our method below:
 Qualitative results of our method on ACS.
 
 ![visualization](figure/vs1.png)
-<div align="center">
 Qualitative results of our method on some hand-drawn molecules images.
 </div> 
 
