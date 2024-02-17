@@ -41,12 +41,14 @@ Run the following command:
 ```
 sh ./exps/train.sh
 ```
+The default batch size was set to 256. And it takes about 20 hours to train with 10 NVIDIA RTX 3090 GPUs. 
 
 ### Inference
 Run the following command:
 ```
 sh ./exps/eval.sh
 ```
+The default batch size was set to 32 with a single NVIDIA RTX 3090 GPU.
 
 ### Visualization
 [comment]: <> ()
