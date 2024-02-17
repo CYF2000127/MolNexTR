@@ -28,8 +28,7 @@ pip install -r requirements.txt
 2. **Abdominal MRI**  [Combined Healthy Abdominal Organ Segmentation dataset](https://chaos.grand-challenge.org/)  
 3. **Cardiac MRI** [Multi-sequence Cardiac MRI Segmentation dataset (bSSFP fold)](http://www.sdspeople.fudan.edu.cn/zhuangxiahai/0/mscmrseg/) 
 
-#### Pre-processing
-Please refer to [Ouyang et al.](https://github.com/cheng-01037/Self-supervised-Fewshot-Medical-Image-Segmentation.git)
+
 
 ### Training
 1. Download pre-trained [ResNet-101 weights](https://download.pytorch.org/models/resnet101-63fe2227.pth) and put into your own backbone folder.
@@ -47,10 +46,10 @@ Run `./exp/validation.sh`
 
 ### Visualization
 [comment]: <> ()
-![visualization](figures/visual.png)
+![visualization](figure/vs1.png)
 <div align="center">
-Qualitative results of our method on Abd-CT and Abd-MRI.
+Qualitative results of our method on ACS.
 </div> 
 
 ## Acknowledgment 
-This code is based on [Q-Net](https://github.com/zjlab-ammi/q-net), [PFENet](https://github.com/dvlab-research/PFENet), thanks for their excellent work!
+This code is based on [MolScribe](https://github.com/thomas0809/MolScribe), thanks for their excellent work!
