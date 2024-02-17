@@ -6,15 +6,15 @@ This is the offical code of following paper "MolNexTR: A Generalized Deep Learni
 In this work, We propose MolNexTR, a novel graph generation model. The model follows the encoder-decoder architecture, takes three-channel molecular images as input, outputs molecular graph structure prediction, and can be easily converted to SMILES. We aim to enhance the robustness and generalization of the molecular structure recognition model by enhancing the feature extraction ability of the model and the augmentation strategy, to deal with any molecular images that may appear in the real literature.
 
 [comment]: <> ()
-
+![visualization](figure/arch.png)
 <div align="center">
-Left: Overview of the CAT-NET; Right: The architecture of CMAT module.
+Overview of our MolNexTR model.
 </div> 
 
 ### Using the code
 Please clone the following repositories:
 ```
-git clone https://github.com/hust-linyi/CAT-Net
+git clone https://github.com/CYF2000127/MolNexTR
 ```
 
 ### Requirement
