@@ -11,11 +11,12 @@ In this work, We propose MolNexTR, a novel graph generation model. The model fol
 Overview of our MolNexTR model.
 </div> 
 
-### Using the code
+## Using the code
 Please clone the following repositories:
 ```
 git clone https://github.com/CYF2000127/MolNexTR
 ```
+## Experiments
 
 ### Requirement
 ```
@@ -23,10 +24,14 @@ pip install -r requirements.txt
 ```
 
 ### Data preparation
-#### Download
-1. **Abdominal CT**  [Synapse Multi-atlas Abdominal Segmentation dataset](https://www.synapse.org/#!Synapse:syn3193805/wiki/217789)
-2. **Abdominal MRI**  [Combined Healthy Abdominal Organ Segmentation dataset](https://chaos.grand-challenge.org/)  
-3. **Cardiac MRI** [Multi-sequence Cardiac MRI Segmentation dataset (bSSFP fold)](http://www.sdspeople.fudan.edu.cn/zhuangxiahai/0/mscmrseg/) 
+For training and inference, please download the following datasets to data/
+#### Training data
+1. **Synthetic**  [PubChem](https://www.synapse.org/#!Synapse:syn3193805/wiki/217789)
+2. **Realistic**  [USPTO](https://chaos.grand-challenge.org/)  
+
+#### Testing dataset
+1. **Synthetic**  [Indigo, ChemDraw](https://www.synapse.org/#!Synapse:syn3193805/wiki/217789)
+2. **Realistic**  [CLEF, UOB, USPTO, Staker, ACS](https://chaos.grand-challenge.org/)  
 
 
 
