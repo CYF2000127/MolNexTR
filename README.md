@@ -37,18 +37,16 @@ For training and inference, please download the following datasets to data/
 
 
 ### Training
-1. Download pre-trained [ResNet-101 weights](https://download.pytorch.org/models/resnet101-63fe2227.pth) and put into your own backbone folder.
-2. Run the following command for Abdominal CT/MRI:
+Run the following command:
 ```
-sh ./exps/train_Abd.sh
-```
-Run the following command for Cardiac MRI:
-```
-sh ./exps/train_CMR.sh
+sh ./exps/train.sh
 ```
 
 ### Inference
-Run `./exp/validation.sh`
+Run the following command:
+```
+sh ./exps/eval.sh
+```
 
 ### Visualization
 [comment]: <> ()
