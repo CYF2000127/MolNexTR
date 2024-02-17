@@ -53,7 +53,7 @@ The default batch size was set to 32 with a single NVIDIA RTX 3090 GPU.
 ### Visualization
 Use Visualization/predict.ipynb for single or batched prediction and visualization.
 
-We also show some qualitative results of our method.
+We also show some qualitative results of our method below:
 
 ![visualization](figure/vs1.png)
 <div align="center">
