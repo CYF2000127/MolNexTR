@@ -24,7 +24,7 @@ pip install -r requirements.txt
 ```
 
 ### Data preparation
-For training and inference, please download the following datasets to data/
+For training and inference, please download the following datasets to your own path.
 #### Training data
 1. **Synthetic:**  [PubChem](https://www.synapse.org/#!Synapse:syn3193805/wiki/217789)
 2. **Realistic:**  [USPTO](https://chaos.grand-challenge.org/)  
