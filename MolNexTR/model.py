@@ -117,18 +117,6 @@ class Encoder(nn.Module):
             self.n_features = self.cnn.num_features  # encoder_dim
             self.cnn.global_pool = nn.Identity()
             self.cnn.fc = nn.Identity()
-        elif model_name.startswith('swin'):
-            self.model_type = 'swin'
-            self.transformer=timm.create_model(model_name, pretrained=pretrained, pretrained_strict=False,
-            use_checkpoint=args.use_checkpoint)
-            self.n_features = self.transformer.num_features
-            self.transformer.head = nn.Identity()
-        elif 'efficientnet' in model_name:
-            self.model_type = 'efficientnet'
-            self.cnn = timm.create_model(model_name, pretrained=pretrained)
-            self.n_features = self.cnn.num_features
-            self.cnn.global_pool = nn.Identity()
-            self.cnn.classifier = nn.Identity()
         elif model_name.startswith('convnext'):
             self.model_type = 'convnext'
             self.cnn = timm.create_model(model_name, pretrained=pretrained)
