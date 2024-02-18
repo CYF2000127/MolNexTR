@@ -30,10 +30,10 @@ For training and inference, please download the following datasets to your own p
 2. **Realistic:**  [USPTO](https://www.dropbox.com/s/3podz99nuwagudy/uspto_mol.zip?dl=0)
 
 #### Testing datasets
-1. **Synthetic:**  [Indigo, ChemDraw](https://www.synapse.org/#!Synapse:syn3193805/wiki/217789)
-2. **Realistic:**  [CLEF, UOB, USPTO, Staker, ACS](https://chaos.grand-challenge.org/)  
-3. **Perturbed by img transform:** [CLEF, UOB, USPTO, Staker, ACS](https://chaos.grand-challenge.org/) 
-4. **Perturbed by curved arrows:** [CLEF, UOB, USPTO, Staker, ACS](https://chaos.grand-challenge.org/) 
+1. **Synthetic:**  [Indigo, ChemDraw](https://huggingface.co/yujieq/MolScribe/blob/main/synthetic.zip)
+2. **Realistic:**  [CLEF, UOB, USPTO, Staker, ACS](https://huggingface.co/yujieq/MolScribe/blob/main/real.zip) 
+3. **Perturbed by img transform:** [CLEF, UOB, USPTO, Staker, ACS](https://huggingface.co/yujieq/MolScribe/blob/main/perturb.zip)
+4. **Perturbed by curved arrows:** [CLEF, UOB, USPTO, Staker, ACS](https://huggingface.co/yujieq/MolScribe/blob/main/perturb.zip)
 
 
 ### Training
@@ -51,7 +51,7 @@ sh ./exps/eval.sh
 The default batch size was set to 32 with a single NVIDIA RTX 3090 GPU.
 
 ### Visualization
-Use Visualization/predict.ipynb for single or batched prediction and visualization.
+Use [`predict.ipynb`](predict.ipynb) for single or batched prediction and visualization.
 
 We also show some qualitative results of our method below:
 
