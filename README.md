@@ -51,7 +51,7 @@ sh ./exps/eval.sh
 The default batch size was set to 32 with a single NVIDIA RTX 3090 GPU.
 
 ### Visualization
-Use [`predict.ipynb`](predict.ipynb) for single or batched prediction and visualization.
+Use [`prediction.ipynb`](prediction.ipynb) for single or batched prediction and visualization.
 
 We also show some qualitative results of our method below:
 
