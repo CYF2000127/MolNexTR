@@ -29,7 +29,7 @@ torchrun \
     --include_condensed \
     --coord_bins 64 --sep_xy \
     --input_size 384 \
-    --encoder swin_base \
+    --encoder convnext \
     --decoder transformer \
     --encoder_lr 4e-4 \
     --decoder_lr 4e-4 \
