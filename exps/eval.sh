@@ -22,7 +22,7 @@ torchrun \
     --formats chartok_coords,edges \
     --coord_bins 64 --sep_xy \
     --input_size 384 \
-    --encoder swin_base \
+    --encoder convnext \
     --decoder transformer \
     --load_path $LOAD_PATH \
     --save_path $SAVE_PATH \
