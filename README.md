@@ -33,7 +33,7 @@ For training and inference, please download the following datasets to your own p
 1. **Synthetic:**  [Indigo, ChemDraw](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/synthetic.zip)
 2. **Realistic:**  [CLEF, UOB, USPTO, Staker, ACS](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/real.zip) 
 3. **Perturbed by img transform:** [CLEF, UOB, USPTO, Staker, ACS](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/perturb_by_imgtransform.zip)
-4. **Perturbed by curved arrows:** [CLEF, UOB, USPTO, Staker, ACS](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/perturb_by_imgtransform.zip)
+4. **Perturbed by curved arrows:** [CLEF, UOB, USPTO, Staker, ACS](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/perturb_by_arrows.zip)
 
 
 ### Training
