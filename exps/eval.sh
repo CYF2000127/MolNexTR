@@ -15,7 +15,7 @@ set -x
 
 torchrun \
     --nproc_per_node=$NUM_GPUS_PER_NODE --nnodes=$NUM_NODES --node_rank $NODE_RANK --master_addr localhost --master_port $MASTER_PORT \
-    train.py \
+    main.py \
     --data_path data \
     --test_file real/\
     --vocab_file MolNexTR/vocab/vocab_chars.json \
