@@ -35,7 +35,7 @@ torchrun \
     --decoder_lr 4e-4 \
     --save_path $SAVE_PATH --save_mode all \
     --label_smoothing 0.1 \
-    --epochs 30 \
+    --epochs 40 \
     --batch_size $((BATCH_SIZE / NUM_GPUS_PER_NODE / ACCUM_STEP)) \
     --gradient_accumulation_steps $ACCUM_STEP \
     --use_checkpoint \
