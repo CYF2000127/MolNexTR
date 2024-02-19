@@ -17,7 +17,7 @@ set -x
 
 torchrun \
     --nproc_per_node=$NUM_GPUS_PER_NODE --nnodes=$NUM_NODES --node_rank $NODE_RANK --master_addr localhost --master_port $MASTER_PORT \
-    train.py \
+    main.py \
     --data_path data \
     --train_file pubchem/train_1m.csv \
     --aux_file uspto_mol/train_680k.csv --coords_file aux_file \
