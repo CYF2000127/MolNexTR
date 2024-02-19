@@ -30,8 +30,8 @@ For training and inference, please download the following datasets to your own p
 2. **Realistic:**  [USPTO](https://www.dropbox.com/s/3podz99nuwagudy/uspto_mol.zip?dl=0)
 
 #### Testing datasets
-1. **Synthetic:**  [Indigo, ChemDraw](https://huggingface.co/yujieq/MolScribe/blob/main/synthetic.zip)
-2. **Realistic:**  [CLEF, UOB, USPTO, Staker, ACS](https://huggingface.co/yujieq/MolScribe/blob/main/real.zip) 
+1. **Synthetic:**  [Indigo, ChemDraw](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/synthetic.zip)
+2. **Realistic:**  [CLEF, UOB, USPTO, Staker, ACS](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/real.zip) 
 3. **Perturbed by img transform:** [CLEF, UOB, USPTO, Staker, ACS](https://huggingface.co/yujieq/MolScribe/blob/main/perturb.zip)
 4. **Perturbed by curved arrows:** [CLEF, UOB, USPTO, Staker, ACS](https://huggingface.co/yujieq/MolScribe/blob/main/perturb.zip)
 
