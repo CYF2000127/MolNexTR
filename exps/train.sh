@@ -22,7 +22,7 @@ torchrun \
     --train_file pubchem/train_1m.csv \
     --aux_file uspto_mol/train_680k.csv --coords_file aux_file \
     --valid_file real/USPTO.csv \
-    --test_file real/CLEF.csv,real/UOB.csv,real/USPTO.csv,real/staker.csv,real/acs.csv,synthetic/indigo.csv,synthetic/chemdraw.csv \
+    --test_file real/your_data_path \
     --vocab_file MolNexTR/vocab/vocab_chars.json \
     --formats chartok_coords,edges \
     --dynamic_indigo --augment --mol_augment \
