@@ -64,5 +64,3 @@ Qualitative results of our method on ACS.
 Qualitative results of our method on some hand-drawn molecules images.
 </div> 
 
-## Acknowledgment 
-This code is based on [MolScribe](https://github.com/thomas0809/MolScribe), thanks for their excellent work!
