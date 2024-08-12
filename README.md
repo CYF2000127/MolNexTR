@@ -29,11 +29,11 @@ pip install -r requirements.txt
 ```python
 import torch
 from MolNexTR import molnextr
-IMAGE = './examples/1.png'
-MODEL = './checkpoints/molnextr_best.pth'
+Image = './examples/1.png'
+Model = './checkpoints/molnextr_best.pth'
 device = torch.device('cpu')
-model = molnextr(MODEL, device)
-predictions = model.predict_final_results(IMAGE, return_atoms_bonds=True)
+model = molnextr(Model, device)
+predictions = model.predict_final_results(Image, return_atoms_bonds=True)
 print(predictions)
 ```
 or use [`prediction.ipynb`](prediction.ipynb). You can also change the image and model path to your own images and models.
