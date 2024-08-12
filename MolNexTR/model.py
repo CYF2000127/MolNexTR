@@ -135,7 +135,7 @@ class molnextr:
             outputs.append(pred_dict)
         return outputs
 
-    def predict_image(self, image, return_atoms_bonds=False, return_confidence=False):
+    def predict_image(self, image, return_atoms_bonds=True, return_confidence=False):
         return self.predict_images([
             image], return_atoms_bonds=return_atoms_bonds, return_confidence=return_confidence)[0]
 
