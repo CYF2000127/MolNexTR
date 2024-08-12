@@ -1,5 +1,5 @@
 # MolNexTR
-This is the offical code of following paper "MolNexTR: A Generalized Deep Learning Model for Molecular Image Recognition".
+This is the official code of the following paper, "MolNexTR: A Generalized Deep Learning Model for Molecular Image Recognition".
 
 ## Highlights
 <p align="justify">
@@ -11,11 +11,59 @@ In this work, We propose MolNexTR, a novel graph generation model. The model fol
 Overview of our MolNexTR model.
 </div> 
 
-## Using the code
-Please clone the following repositories:
+## Using the code and the model
+Clone the following repositories:
 ```
 git clone https://github.com/CYF2000127/MolNexTR
 ```
+### Example usage
+1. Install requirements
+```
+pip install -r requirements.txt
+```
+
+2. Download our model checkpoint from Our [Hugging Face Repo](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/molnextr_best.pth) and put in your own path 
+
+3. Run the following code to predict molecular images:
+```python
+import torch
+from MolNexTR import molnextr
+IMAGE = './examples/1.png'
+MODEL = './checkpoints/molnextr_best.pth'
+device = torch.device('cpu')
+model = molnextr(MODEL, device)
+predictions = model.predict_final_results(IMAGE, return_atoms_bonds=True)
+print(predictions)
+```
+or use [`prediction.ipynb`](prediction.ipynb).
+
+The input is a molecular image 
+![visualization](examples/1.png)
+<div align="center",width="50">
+Example input molecular image.
+</div> 
+The output includes the Atom sets, Bond sets, predicted MOlFile,and predicted SMILES:
+
+``` 
+{
+    'atom_sets':  [
+                  {'atom_number': '0', 'atom_symbol': '[Ph]', 'coords': (0.143, 0.349)},
+                  {'atom_number': '1', 'atom_symbol': 'C', 'coords': (0.286, 0.413)},
+                  {'atom_number': '2', 'atom_symbol': 'C', 'coords': (0.429, 0.349)}, ... 
+                  ],
+    'bonds_sets': [
+                  {'atom_number': '0', 'bond_type': 'single', 'endpoints': (0, 1)},
+                  {'atom_number': '1', 'bond_type': 'double', 'endpoints': (1, 2)}, 
+                  {'atom_number': '1', 'bond_type': 'single', 'endpoints': (1, 5)}, 
+                  {'atom_number': '2', 'bond_type': 'single', 'endpoints': (2, 3)}, ...
+                  ],
+    'predicted_molfile': '2D\n\n 11 12  0  0  0  0  0  0  0  0999 V2000 ...',
+    'predicted_smiles': 'COC1CCCc2oc(-c3ccccc3)cc21',
+}   
+```
+
+
+
 
 ## Experiments
 
@@ -32,9 +80,9 @@ For training and inference, please download the following datasets to your own p
 
 #### Testing datasets
 1. **Synthetic:**  [Indigo, ChemDraw](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/synthetic.zip)
-2. **Realistic:**  [CLEF, UOB, USPTO, Staker, ACS](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/real.zip) 
-3. **Perturbed by img transform:** [CLEF, UOB, USPTO, Staker, ACS](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/perturb_by_imgtransform.zip)
-4. **Perturbed by curved arrows:** [CLEF, UOB, USPTO, Staker, ACS](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/perturb_by_arrows.zip)
+2. **Realistic:**  [CLEF, UOB, USPTO, JPO, Staker, ACS](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/real.zip) 
+3. **Perturbed by IMG transform:** [CLEF, UOB, USPTO, JPO, Staker, ACS](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/perturb_by_imgtransform.zip)
+4. **Perturbed by curved arrows:** [CLEF, UOB, USPTO, JPO, Staker, ACS](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/perturb_by_arrows.zip)
 
 
 ### Training
@@ -52,7 +100,7 @@ sh ./exps/eval.sh
 The default batch size was set to 32 with a single NVIDIA RTX 3090 GPU.
 
 ### Visualization
-Use [`prediction.ipynb`](prediction.ipynb) for single or batched prediction and visualization.
+Use [`visualization.ipynb`](visualization.ipynb) for visualization of the ground truths and the prections.
 
 We also show some qualitative results of our method below:
 
