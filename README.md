@@ -47,9 +47,9 @@ The output dictionary includes the Atom sets, Bond sets, predicted MolFile, and 
 ``` 
 {
     'atom_sets':  [
-                  {'atom_number': '0', 'atom_symbol': '[Ph]', 'coords': (0.143, 0.349)},
-                  {'atom_number': '1', 'atom_symbol': 'C', 'coords': (0.286, 0.413)},
-                  {'atom_number': '2', 'atom_symbol': 'C', 'coords': (0.429, 0.349)}, ... 
+                  {'atom_number': '0', 'symbol': 'Ph', 'coords': (0.143, 0.349)},
+                  {'atom_number': '1', 'symbol': 'C', 'coords': (0.286, 0.413)},
+                  {'atom_number': '2', 'symbol': 'C', 'coords': (0.429, 0.349)}, ... 
                   ],
     'bonds_sets': [
                   {'atom_number': '0', 'bond_type': 'single', 'endpoints': (0, 1)},
