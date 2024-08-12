@@ -68,7 +68,7 @@ The output dictionary includes the atom sets, bond sets, predicted MolFile, and 
 
 ## Experiments
 
-### Requirement
+### Requirements
 ```
 pip install -r requirements.txt
 ```
