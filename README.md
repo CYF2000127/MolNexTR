@@ -115,7 +115,7 @@ We also show some qualitative results of our method below:
 <div align="center">
 Qualitative results of our method on ACS.
 
-![visualization](figure/vs2.png)
+![visualization](figure/vs3.png)
 Qualitative results of our method on some hand-drawn molecular images.
 </div> 
 
