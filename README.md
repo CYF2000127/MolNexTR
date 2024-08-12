@@ -35,7 +35,7 @@ model = molnextr(MODEL, device)
 predictions = model.predict_final_results(IMAGE, return_atoms_bonds=True)
 print(predictions)
 ```
-or use [`prediction.ipynb`](prediction.ipynb).
+or use [`prediction.ipynb`](prediction.ipynb). You can also change the image and model path to your own images and models.
 
 The input is a molecular image 
 ![visualization](examples/1.png)
@@ -85,7 +85,7 @@ For training and inference, please download the following datasets to your own p
 4. **Perturbed by curved arrows:** [CLEF, UOB, USPTO, JPO, Staker, ACS](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/perturb_by_arrows.zip)
 
 
-### Training
+### Train
 Run the following command:
 ```
 sh ./exps/train.sh
@@ -98,7 +98,13 @@ Run the following command:
 sh ./exps/eval.sh
 ```
 The default batch size was set to 32 with a single NVIDIA RTX 3090 GPU.
+The outputs include the main metrics we used, such as SMILES exact matching accuracy and Graph exact matching accuracy.
 
+### Prediction
+Run the following command:
+```
+python prediction.py --model_path your_model_path --image_path your_image_path
+```
 ### Visualization
 Use [`visualization.ipynb`](visualization.ipynb) for visualization of the ground truths and the prections.
 
