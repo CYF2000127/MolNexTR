@@ -23,7 +23,7 @@ git clone https://github.com/CYF2000127/MolNexTR
 pip install -r requirements.txt
 ```
 
-2. Download our model checkpoint from Our [Hugging Face Repo](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/molnextr_best.pth) or [Zenodo Repo](https://zenodo.org/records/13304899) and put in your own path 
+2. Download the model checkpoint from our [Hugging Face Repo](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/molnextr_best.pth) or [Zenodo Repo](https://zenodo.org/records/13304899) and put in your own path 
 
 3. Run the following code to predict molecular images:
 ```python
