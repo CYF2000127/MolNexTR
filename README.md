@@ -42,7 +42,7 @@ The input is a molecular image
 <div align="center",width="50">
 Example input molecular image.
 </div> 
-The output includes the Atom sets, Bond sets, predicted MOlFile,and predicted SMILES:
+The output dictionary includes the Atom sets, Bond sets, predicted MolFile, and predicted SMILES:
 
 ``` 
 {
@@ -106,7 +106,7 @@ Run the following command:
 python prediction.py --model_path your_model_path --image_path your_image_path
 ```
 ### Visualization
-Use [`visualization.ipynb`](visualization.ipynb) for visualization of the ground truths and the prections.
+Use [`visualization.ipynb`](visualization.ipynb) to visualize the ground truths and the predictions.
 
 We also show some qualitative results of our method below:
 
@@ -115,6 +115,6 @@ We also show some qualitative results of our method below:
 Qualitative results of our method on ACS.
 
 ![visualization](figure/vs1.png)
-Qualitative results of our method on some hand-drawn molecules images.
+Qualitative results of our method on some hand-drawn molecular images.
 </div> 
 
