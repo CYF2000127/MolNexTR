@@ -12,11 +12,12 @@ Overview of our MolNexTR model.
 </div> 
 
 ## Using the code and the model
+### Using the code
 Clone the following repositories:
 ```
 git clone https://github.com/CYF2000127/MolNexTR
 ```
-### Example usage
+### Example usage of the model
 1. Install requirements
 ```
 pip install -r requirements.txt
