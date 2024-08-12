@@ -42,7 +42,7 @@ The input is a molecular image
 <div align="center",width="50">
 Example input molecular image.
 </div> 
-The output dictionary includes the Atom sets, Bond sets, predicted MolFile, and predicted SMILES:
+The output dictionary includes the atom sets, bond sets, predicted MolFile, and predicted SMILES:
 
 ``` 
 {
@@ -58,7 +58,7 @@ The output dictionary includes the Atom sets, Bond sets, predicted MolFile, and 
                   {'atom_number': '2', 'bond_type': 'single', 'endpoints': (2, 3)}, ...
                   ],
     'predicted_molfile': '2D\n\n 11 12  0  0  0  0  0  0  0  0999 V2000 ...',
-    'predicted_smiles': 'COC1CCCc2oc(-c3ccccc3)cc21',
+    'predicted_smiles': 'COC1CCCc2oc(-c3ccccc3)cc21'
 }   
 ```
 
