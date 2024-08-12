@@ -33,7 +33,7 @@ Image = './examples/1.png'
 Model = './checkpoints/molnextr_best.pth'
 device = torch.device('cpu')
 model = molnextr(Model, device)
-predictions = model.predict_final_results(Image, return_atoms_bonds=True)
+predictions = model.predict_final_results(Image)
 print(predictions)
 ```
 or use [`prediction.ipynb`](prediction.ipynb). You can also change the image and model path to your own images and models.
