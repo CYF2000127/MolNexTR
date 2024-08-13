@@ -15,7 +15,7 @@ torchrun \
     --nproc_per_node=$NUM_GPUS_PER_NODE --nnodes=$NUM_NODES --node_rank $NODE_RANK --master_addr localhost --master_port $MASTER_PORT \
     main.py \
     --data_path data \
-    --test_file real/\
+    --test_file real/acs.csv\
     --vocab_file MolNexTR/vocab/vocab_chars.json \
     --formats chartok_coords,edges \
     --coord_bins 64 --sep_xy \
