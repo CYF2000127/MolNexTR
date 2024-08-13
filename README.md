@@ -107,7 +107,7 @@ Run the following command:
 python prediction.py --model_path your_model_path --image_path your_image_path
 ```
 ### Visualization
-Use [`visualization.ipynb`](visualization.ipynb) to visualize the ground truths and the predictions.
+Use [`visualization.ipynb`](visualization.ipynb) to visualize the ground truth and the predictions.
 
 We also show some qualitative results of our method below:
 
