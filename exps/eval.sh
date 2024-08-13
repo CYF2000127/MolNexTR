@@ -4,9 +4,7 @@ NUM_NODES=1
 NUM_GPUS_PER_NODE=2
 NODE_RANK=0
 MASTER_PORT=$(shuf -n 1 -i 10000-65535)
-
 BATCH_SIZE=8
-
 LOAD_PATH=/
 SAVE_PATH=/
 mkdir -p ${SAVE_PATH}
@@ -22,8 +20,6 @@ torchrun \
     --formats chartok_coords,edges \
     --coord_bins 64 --sep_xy \
     --input_size 384 \
-    --encoder convnext \
-    --decoder transformer \
     --load_path $LOAD_PATH \
     --save_path $SAVE_PATH \
     --batch_size $((BATCH_SIZE / NUM_GPUS_PER_NODE)) \
