@@ -99,7 +99,7 @@ Run the following command:
 sh ./exps/eval.sh
 ```
 The default batch size was set to 32 with a single NVIDIA RTX 3090 GPU.
-The outputs include the main metrics we used, such as SMILES exact matching accuracy and Graph exact matching accuracy.
+The outputs include the main metrics we used, such as SMILES and graph exact matching accuracy.
 
 ### Prediction
 Run the following command:
