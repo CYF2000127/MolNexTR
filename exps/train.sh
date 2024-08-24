@@ -28,6 +28,7 @@ torchrun \
     --include_condensed \
     --coord_bins 64 --sep_xy \
     --input_size 384 \
+    --encoder convnext \
     --encoder_lr 4e-4 \
     --decoder_lr 4e-4 \
     --save_path $SAVE_PATH --save_mode all \
