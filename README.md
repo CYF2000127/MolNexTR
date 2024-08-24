@@ -1,5 +1,5 @@
 # MolNexTR
-This is the official code of the following paper, "MolNexTR: A Generalized Deep Learning Model for Molecular Image Recognition".
+
 
 ## Highlights
 <p align="justify">
