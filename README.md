@@ -97,14 +97,14 @@ Run the following command:
 ```
 sh ./exps/train.sh
 ```
-The default batch size was set to 256. And it takes about 20 hours to train with 10 NVIDIA RTX 3090 GPUs. 
+The default batch size was set to 256. And it takes about 20 hours to train with 10 NVIDIA RTX 3090 GPUs. Please modify the corresponding parameters according to your hardware configuration.
 
 ### Inference
 Run the following command:
 ```
 sh ./exps/eval.sh
 ```
-The default batch size was set to 32 with a single NVIDIA RTX 3090 GPU.
+The default batch size was set to 32 with a single NVIDIA RTX 3090 GPU. Please modify the corresponding parameters according to your hardware configuration.
 The outputs include the main metrics we used, such as SMILES and graph exact matching accuracy.
 
 ### Prediction
