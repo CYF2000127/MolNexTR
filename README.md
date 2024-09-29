@@ -18,7 +18,7 @@ Clone the following repositories:
 git clone https://github.com/CYF2000127/MolNexTR
 ```
 ### Example usage of the model
-1. First create and activate a [conda](https://numdifftools.readthedocs.io/en/stable/how-to/create_virtual_env_with_conda.html) environment with the following in a \textbf{Linux} environment
+1. First create and activate a [conda](https://numdifftools.readthedocs.io/en/stable/how-to/create_virtual_env_with_conda.html) environment with the following in a Linux environment
 ```
 conda create -n molnextr python=3.8
 conda activate molnextr
