@@ -22,6 +22,8 @@ git clone https://github.com/CYF2000127/MolNexTR
 ```
 conda create -n molnextr python=3.8
 conda activate molnextr
+```
+
 1. Install requirements:
 ```
 pip install -r requirements.txt
