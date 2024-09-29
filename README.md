@@ -24,7 +24,7 @@ conda create -n molnextr python=3.8
 conda activate molnextr
 ```
 
-1. Install requirements:
+2. Install requirements:
 ```
 pip install -r requirements.txt
 ```
