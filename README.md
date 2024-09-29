@@ -18,16 +18,21 @@ Clone the following repositories:
 git clone https://github.com/CYF2000127/MolNexTR
 ```
 ### Example usage of the model
-1. First create and activate a [conda](https://numdifftools.readthedocs.io/en/stable/how-to/create_virtual_env_with_conda.html) environment with the following in a Linux environment
+1. First create and activate a [conda](https://numdifftools.readthedocs.io/en/stable/how-to/create_virtual_env_with_conda.html) environment with the following command in a Linux environment
 ```
 conda create -n molnextr python=3.8
 conda activate molnextr
 ```
 
-2. Install requirements:
+2. Then Install requirements:
 ```
 pip install -r requirements.txt
 ```
+Alternatively, use the following command
+```
+conda env create -f environment.yml
+```
+
 
 2. Download the model checkpoint from our [Hugging Face Repo](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/molnextr_best.pth) or Zenodo Repo: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13304899.svg)](https://doi.org/10.5281/zenodo.13304899) and put in your own path 
 
@@ -73,11 +78,6 @@ The output dictionary includes the atom sets, bond sets, predicted MolFile, and 
 
 
 ## Experiments
-
-### Requirements
-```
-pip install -r requirements.txt
-```
 
 ### Data preparation
 For training and inference, please download the following datasets to your own path.
