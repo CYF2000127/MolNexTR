@@ -33,34 +33,7 @@ INDIGO_DEARMOTIZE_PROB = 0.8
 INDIGO_COLOR_PROB = 0.2
 
 
-def get_transforms(input_size, augment=True, rotate=True, debug=False):
-    trans_list = []
-    if augment and rotate:
-        trans_list.append(SafeRotate(limit=90, border_mode=cv2.BORDER_CONSTANT, value=(255, 255, 255)))
-    trans_list.append(CropWhite(pad=50))
-    #trans_list.append(PadToSquare(p=1))
-    trans_list.append(PadToSquare(p=1))
 
-    if augment:
-        trans_list += [
-            # NormalizedGridDistortion(num_steps=10, distort_limit=0.3),
-            A.CropAndPad(percent=[-0.01, 0.00], keep_size=False, p=0.5),
-            PadWhite(pad_ratio=0.4, p=0.2),
-            A.Downscale(scale_min=0.2, scale_max=0.5, interpolation=3),
-            A.Blur(),
-            A.GaussNoise(),
-            SaltAndPepperNoise(num_dots=20, p=0.5)
-        ]
-    trans_list.append(A.Resize(input_size, input_size))
-    if not debug:
-        mean = [0.485, 0.456, 0.406]
-        std = [0.229, 0.224, 0.225]
-        trans_list += [
-            A.ToGray(p=1),
-            A.Normalize(mean=mean, std=std),
-            ToTensorV2(),
-        ]
-    return A.Compose(trans_list, keypoint_params=A.KeypointParams(format='xy', remove_invisible=False))
 
 
 def add_functional_group(indigo, mol, debug=False):
@@ -206,7 +179,29 @@ def generate_output_smiles(indigo, mol):
             # special cases with extension
             smiles = smiles.split(' ')[0]
         return mol, smiles
+        
+def get_transforms(input_size, augment=True, rotate=True, debug=False):
 
+    if augment:
+        trans_list += [
+            # NormalizedGridDistortion(num_steps=10, distort_limit=0.3),
+            A.CropAndPad(percent=[-0.01, 0.00], keep_size=False, p=0.5),
+            PadWhite(pad_ratio=0.4, p=0.2),
+            A.Downscale(scale_min=0.2, scale_max=0.5, interpolation=3),
+            A.Blur(),
+            A.GaussNoise(),
+            SaltAndPepperNoise(num_dots=20, p=0.5)
+        ]
+    trans_list.append(A.Resize(input_size, input_size))
+    if not debug:
+        mean = [0.485, 0.456, 0.406]
+        std = [0.229, 0.224, 0.225]
+        trans_list += [
+            A.ToGray(p=1),
+            A.Normalize(mean=mean, std=std),
+            ToTensorV2(),
+        ]
+    return A.Compose(trans_list, keypoint_params=A.KeypointParams(format='xy', remove_invisible=False))
 
 def add_comment(indigo):
     if random.random() < INDIGO_COMMENT_PROB:
