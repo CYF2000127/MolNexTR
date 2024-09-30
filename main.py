@@ -40,7 +40,7 @@ def get_args():
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--backend', type=str, default='gloo', choices=['gloo', 'nccl'])
     # Model
-    parser.add_argument('--encoder', type=str, default='resnet34')
+    parser.add_argument('--encoder', type=str, default='swin_base')
     parser.add_argument('--decoder', type=str, default='lstm')
     parser.add_argument('--no_pretrained', action='store_true')
     parser.add_argument('--use_checkpoint', action='store_true')
@@ -119,9 +119,9 @@ def load_states(args, load_path):
     if load_path.endswith('.pth'):
         path = load_path
     elif args.load_ckpt == 'best':
-        path = os.path.join(load_path, f'{args.encoder}_{args.decoder}_best.pth')
+        path = os.path.join(load_path, f'{args.decoder}_conv_best.pth')
     else:
-        path = os.path.join(load_path, f'{args.encoder}_{args.decoder}_{args.load_ckpt}.pth')
+        path = os.path.join(load_path, f'{args.decoder}_conv.pth')
     print_rank_0('Load ' + path)
     states = torch.load(path, map_location=torch.device('cpu'))
     return states
@@ -142,21 +142,19 @@ def safe_load(module, module_states):
 def get_model(args, tokenizer, device, load_path=None):
     encoder = Encoder(args, pretrained=(not args.no_pretrained and load_path is None))
     args.encoder_dim = encoder.n_features
-    print_rank_0(f'encoder_dim: {args.encoder_dim}')
 
     decoder = Decoder(args, tokenizer)
     if load_path:
         states = load_states(args, load_path)
         safe_load(encoder, states['encoder'])
         safe_load(decoder, states['decoder'])
-        # print_rank_0(f"Model loaded from {load_path}")
     encoder.to(device)
     decoder.to(device)
 
     if args.local_rank != -1:
         encoder = DDP(encoder, device_ids=[args.local_rank], output_device=args.local_rank)
         decoder = DDP(decoder, device_ids=[args.local_rank], output_device=args.local_rank)
-        print_rank_0("DDP setup finished")
+        print_rank_0("DDP setup")
 
     return encoder, decoder
 
@@ -231,11 +229,11 @@ def train_fn(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
         if step % args.print_freq == 0 or step == (len(train_loader) - 1):
             loss_str = ' '.join([f'{k}:{v.avg:.4f}' for k, v in loss_meter.subs.items()])
             print_rank_0('Epoch: [{0}][{1}/{2}] '
-                         'Data {data_time.avg:.3f}s ({sum_data_time}) '
-                         'Run {remain:s} '
+                         
+                         'Runing {remain:s} '
                          'Loss: {loss.avg:.4f} ({loss_str}) '
-                         'Grad: {encoder_grad_norm:.3f}/{decoder_grad_norm:.3f} '
-                         'LR: {encoder_lr:.6f} {decoder_lr:.6f}'
+                         'Grad: {encoder_grad_norm:.4f}/{decoder_grad_norm:.4f} '
+                         'lr: {encoder_lr:.5f} {decoder_lr:.5f}'
             .format(
                 epoch + 1, step, len(train_loader), batch_time=batch_time,
                 data_time=data_time, loss=loss_meter, loss_str=loss_str,
@@ -280,9 +278,8 @@ def valid_fn(valid_loader, encoder, decoder, tokenizer, device, args):
         batch_time.update(time.time() - end)
         end = time.time()
         if step % args.print_freq == 0 or step == (len(valid_loader) - 1):
-            print_rank_0('EVAL: [{0}/{1}] '
-                         'Data {data_time.avg:.3f}s ({sum_data_time}) '
-                         'Elapsed {remain:s} '
+            print_rank_0('Eveluation: [{0}/{1}] '
+                         'Spent {remain:s} '
             .format(
                 step, len(valid_loader), batch_time=batch_time,
                 data_time=data_time,
@@ -307,13 +304,9 @@ def train_loop(args, train_df, valid_df, aux_df, tokenizer, save_path):
         save_args(args)
         SUMMARY = init_summary_writer(save_path)
 
-    print_rank_0("========== training ==========")
+    print_rank_0("training started")
 
     device = args.device
-
-    # ====================================================
-    # loader
-    # ====================================================
 
     if aux_df is None:
         train_dataset = TrainDataset(args, train_df, tokenizer, split='train', dynamic_indigo=args.dynamic_indigo)
@@ -427,7 +420,7 @@ def train_loop(args, train_df, valid_df, aux_df, tokenizer, save_path):
 
 
 def inference(args, data_df, tokenizer, encoder=None, decoder=None, save_path=None, split='test'):
-    print_rank_0("========== decoding ==========")
+    print_rank_0("inference started")
     print_rank_0(data_df.attrs['file'])
 
     if args.local_rank == 0 and os.path.isdir(save_path):
@@ -489,7 +482,6 @@ def inference(args, data_df, tokenizer, encoder=None, decoder=None, save_path=No
         smiles_list, molblock_list, r_success = convert_graph_to_smiles(
             pred_df['node_coords'], pred_df['node_symbols'], pred_df['edges'])
 
-        print(f'Graph to SMILES success ratio: {r_success:.4f}')
         pred_df['graph_SMILES'] = smiles_list
         if args.molblock:
             pred_df['molblock'] = molblock_list
@@ -501,7 +493,6 @@ def inference(args, data_df, tokenizer, encoder=None, decoder=None, save_path=No
                 pred_df['SMILES'], pred_df['node_coords'], pred_df['node_symbols'], pred_df['edges'])
         else:
             smiles_list, _, r_success = postprocess_smiles(pred_df['SMILES'])
-        print(f'Postprocess SMILES success ratio: {r_success:.4f}')
         pred_df['post_SMILES'] = smiles_list
 
     # Keep the main molecule
@@ -514,24 +505,22 @@ def inference(args, data_df, tokenizer, encoder=None, decoder=None, save_path=No
     # Compute scores
     if 'SMILES' in data_df.columns:
         evaluator = SmilesEvaluator(data_df['SMILES'], tanimoto=True)
-        print('label:', data_df['SMILES'].values[:2])
         if 'SMILES' in pred_df.columns:
-            print('pred:', pred_df['SMILES'].values[:2])
             scores.update(evaluator.evaluate(pred_df['SMILES']))
         if 'post_SMILES' in pred_df.columns:
             post_scores = evaluator.evaluate(pred_df['post_SMILES'])
-            scores['post_smiles'] = post_scores['canon_smiles']
-            scores['post_graph'] = post_scores['graph']
-            scores['post_chiral'] = post_scores['chiral']
-            scores['post_tanimoto'] = post_scores['tanimoto']
+            scores['postprocessed_smiles'] = post_scores['canon_smiles']
+            scores['postprocessed_graph_smiles'] = post_scores['graph']
+            scores['postprocessed_chiral'] = post_scores['chiral']
+            scores['postprocessed_tanimoto'] = post_scores['tanimoto']
         if 'graph_SMILES' in pred_df.columns:
             graph_scores = evaluator.evaluate(pred_df['graph_SMILES'])
-            scores['graph_smiles'] = graph_scores['canon_smiles']
-            scores['graph_graph'] = graph_scores['graph']
-            scores['graph_chiral'] = graph_scores['chiral']
-            scores['graph_tanimoto'] = graph_scores['tanimoto']
+            # scores['graph_smiles'] = graph_scores['canon_smiles']
+            # scores['graph_graph'] = graph_scores['graph']
+            # scores['graph_chiral'] = graph_scores['chiral']
+            # scores['graph_tanimoto'] = graph_scores['tanimoto']
 
-    print('Save predictions...')
+    print('Saving predictions:')
     file = data_df.attrs['file'].split('/')[-1]
     pred_df = format_df(pred_df)
     if args.predict_coords:
@@ -550,20 +539,20 @@ def get_chemdraw_data(args):
     if args.do_train:
         train_files = args.train_file.split(',')
         train_df = pd.concat([pd.read_csv(os.path.join(args.data_path, file)) for file in train_files])
-        print_rank_0(f'train.shape: {train_df.shape}')
+        print_rank_0(f'train: {train_df.shape}')
         if args.aux_file:
             aux_df = pd.read_csv(os.path.join(args.data_path, args.aux_file))
-            print_rank_0(f'aux.shape: {aux_df.shape}')
+            print_rank_0(f'aux: {aux_df.shape}')
     if args.do_train or args.do_valid:
         valid_df = pd.read_csv(os.path.join(args.data_path, args.valid_file))
         valid_df.attrs['file'] = args.valid_file
-        print_rank_0(f'valid.shape: {valid_df.shape}')
+        print_rank_0(f'valid: {valid_df.shape}')
     if args.do_test:
         test_files = args.test_file.split(',')
         test_df = [pd.read_csv(os.path.join(args.data_path, file)) for file in test_files]
         for file, df in zip(test_files, test_df):
             df.attrs['file'] = file
-            print_rank_0(file + f' test.shape: {df.shape}')
+            print_rank_0(file + f' test: {df.shape}')
     tokenizer = get_tokenizer(args)
     return train_df, valid_df, test_df, aux_df, tokenizer
 
@@ -583,7 +572,6 @@ def main():
     args.formats = args.formats.split(',')
     args.nodes = any([f in args.formats for f in ['atomtok_coords', 'chartok_coords']])
     args.edges = any([f in args.formats for f in ['atomtok_coords', 'chartok_coords']])
-    print_rank_0('Output formats: ' + ' '.join(args.formats))
 
     train_df, valid_df, test_df, aux_df, tokenizer = get_chemdraw_data(args)
 
