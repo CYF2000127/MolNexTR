@@ -33,34 +33,6 @@ INDIGO_DEARMOTIZE_PROB = 0.8
 INDIGO_COLOR_PROB = 0.2
 
 
-def get_transforms(input_size, augment=True, rotate=True, debug=False):
-    trans_list = []
-    if augment and rotate:
-        trans_list.append(SafeRotate(limit=90, border_mode=cv2.BORDER_CONSTANT, value=(255, 255, 255)))
-    trans_list.append(CropWhite(pad=50))
-    #trans_list.append(PadToSquare(p=1))
-    trans_list.append(PadToSquare(p=1))
-
-    if augment:
-        trans_list += [
-            # NormalizedGridDistortion(num_steps=10, distort_limit=0.3),
-            A.CropAndPad(percent=[-0.01, 0.00], keep_size=False, p=0.5),
-            PadWhite(pad_ratio=0.4, p=0.2),
-            A.Downscale(scale_min=0.2, scale_max=0.5, interpolation=3),
-            A.Blur(),
-            A.GaussNoise(),
-            SaltAndPepperNoise(num_dots=20, p=0.5)
-        ]
-    trans_list.append(A.Resize(input_size, input_size))
-    if not debug:
-        mean = [0.485, 0.456, 0.406]
-        std = [0.229, 0.224, 0.225]
-        trans_list += [
-            A.ToGray(p=1),
-            A.Normalize(mean=mean, std=std),
-            ToTensorV2(),
-        ]
-    return A.Compose(trans_list, keypoint_params=A.KeypointParams(format='xy', remove_invisible=False))
 
 
 def add_functional_group(indigo, mol, debug=False):
@@ -182,6 +154,36 @@ def add_rand_condensed(indigo, mol):
         r = mol.addAtom(symbol)
         r.addBond(atom, 1)
     return mol
+
+def get_transforms(input_size, test_file, augment=True, rotate=True, debug=False):
+    trans_list = []
+    if augment and rotate:
+        trans_list.append(SafeRotate(limit=90, border_mode=cv2.BORDER_CONSTANT, value=(255, 255, 255)))
+    trans_list.append(CropWhite(pad=50))
+    if test_file == 'real/acs.csv' or test_file == 'real/UOB.csv':
+        trans_list.append(PadToSquare(p=1))
+
+    if augment:
+        trans_list += [
+            # NormalizedGridDistortion(num_steps=10, distort_limit=0.3),
+            A.CropAndPad(percent=[-0.01, 0.00], keep_size=False, p=0.5),
+            PadWhite(pad_ratio=0.4, p=0.2),
+            A.Downscale(scale_min=0.2, scale_max=0.5, interpolation=3),
+            A.Blur(),
+            A.GaussNoise(),
+            SaltAndPepperNoise(num_dots=20, p=0.5)
+        ]
+    trans_list.append(A.Resize(input_size, input_size))
+    if not debug:
+        mean = [0.485, 0.456, 0.406]
+        std = [0.229, 0.224, 0.225]
+        trans_list += [
+            A.ToGray(p=1),
+            A.Normalize(mean=mean, std=std),
+            ToTensorV2(),
+        ]
+    return A.Compose(trans_list, keypoint_params=A.KeypointParams(format='xy', remove_invisible=False))
+
 
 
 def generate_output_smiles(indigo, mol):
@@ -347,7 +349,7 @@ class TrainDataset(Dataset):
                     field = FORMAT_INFO[format_]['name']
                     if field in df.columns:
                         self.labels[format_] = df[field].values
-        self.transform = get_transforms(args.input_size,
+        self.transform = get_transforms(args.input_size, args.test_file,
                                         augment=(self.labelled and args.augment))
         # self.fix_transform = A.Compose([A.Transpose(p=1), A.VerticalFlip(p=1)])
         self.dynamic_indigo = (dynamic_indigo and split == 'train')

@@ -473,11 +473,11 @@ def _replace_functional_group1(smiles):
     for token in tokens:
         if token[0] == '[':
             if token[1:-1] == 'COOMe':
-                print(smiles)
+                #print(smiles)
                 placeholder = 'N'
                 #placeholder = f'[C=(O)OC]'
                 mappings[isotope] = 'COOMe'
-                print(mappings)
+                #print(mappings)
                 new_tokens.append(placeholder)
                 print(''.join(new_tokens))
                 continue
@@ -525,10 +525,10 @@ def _expand_functional_group(mol, mappings, debug=False):
                 isotope = atom.GetIsotope()
                 if isotope > 0 and isotope in mappings:
                     symbol = mappings[isotope]
-                    print(symbol)
+                    #print(symbol)
                 if 'COOMe' in mappings.values():
                     symbol = 'COOMe'
-                    print(symbol)
+                    #print(symbol)
 
                 if not (isinstance(symbol, str) and len(symbol) > 0):
                     continue
@@ -707,11 +707,11 @@ def _postprocess_smiles(smiles, coords=None, symbols=None, edges=None, molblock=
     try:
         pred_smiles = smiles
         pred_smiles, mappings = (_replace_functional_group(pred_smiles))
-        print('pred_smiles1:', pred_smiles)
+        #print('pred_smiles1:', pred_smiles)
         if coords is not None and symbols is not None and edges is not None:
             pred_smiles = pred_smiles.replace('@', '').replace('/', '').replace('\\', '')
-            print('pred_smiles11', pred_smiles)
-            print('mapping11', mappings)
+            #print('pred_smiles11', pred_smiles)
+            #print('mapping11', mappings)
             mol = Chem.RWMol(Chem.MolFromSmiles(pred_smiles, sanitize=False))
             mol = _verify_chirality(mol, coords, symbols, edges, debug)
         else:
@@ -720,7 +720,7 @@ def _postprocess_smiles(smiles, coords=None, symbols=None, edges=None, molblock=
         if molblock:
             pred_molblock = Chem.MolToMolBlock(mol)
         pred_smiles, mol = _expand_functional_group(mol, mappings)
-        print('pred_smiles2:', pred_smiles)
+        #print('pred_smiles2:', pred_smiles)
         success = True
     except Exception as e:
         if debug:
