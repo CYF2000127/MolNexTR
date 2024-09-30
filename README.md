@@ -28,7 +28,7 @@ conda activate molnextr
 ```
 pip install -r requirements.txt
 ```
-Alternatively, use the following command:
+Alternatively, directly use the following command:
 ```
 conda env create -f environment.yml
 ```
