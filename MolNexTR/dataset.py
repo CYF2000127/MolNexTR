@@ -1,3 +1,5 @@
+"""preprocess for the traing dataset """
+
 import os
 import cv2
 import time
