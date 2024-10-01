@@ -1,4 +1,4 @@
-""" model components"""
+""" model components such as encoder, decoder"""
 import numpy as np
 import torch
 import torch.nn as nn
