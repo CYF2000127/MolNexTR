@@ -107,7 +107,10 @@ SUBSTITUTIONS: List[Substitution] = [
     Substitution(['DMF'], 'CN(C)C=O', "CN(C)C=O", 0),  # Dimethylformamide
     Substitution(['DMSO'], 'CS(=O)C', "CS(=O)C", 0),  # Dimethyl sulfoxide
     Substitution(['THF'], 'C1CCCO1', "C1CCCO1", 0),  # Tetrahydrofuran
-
+    Substitution(['OCF3'], 'FC(F)(F)O', "FC(F)(F)O", 0), 
+    Substitution(['CF4','GF9'], 'C(F)(F)F', "C(F)(F)F", 0), 
+    Substitution(['N2N,H2N'], 'N', "N", 0), 
+    Substitution(['CH3CH3'], 'C#C', "C#C", 0), 
     #Substitution(['C19H15'], 'CC1=CC=CC=C1C2=CC=CC=C2C3=CC=CC=C3', 'CC1=CC=CC=C1C2=CC=CC=C2C3=CC=CC=C3', 0.5),# Trityl
     ### complex substituents
 
