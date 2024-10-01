@@ -1,4 +1,4 @@
-"""model for MolNexTR"""
+""" main model construction for MolNexTR """
 
 import argparse
 from typing import List
