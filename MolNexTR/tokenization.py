@@ -1,4 +1,4 @@
-"""tokenizer for output sequence"""
+"""tokenization in tokenizer for output sequence"""
 import os
 import json
 import random
