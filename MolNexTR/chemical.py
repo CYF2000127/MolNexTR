@@ -1,4 +1,4 @@
-""" chemical rules"""
+""" chemical rules that are used in converting graph to smiles"""
 import copy
 import traceback
 import numpy as np
