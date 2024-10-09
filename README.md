@@ -82,8 +82,8 @@ The output dictionary includes the atom sets, bond sets, predicted MolFile, and 
 ### Data preparation
 For training and inference, please download the following datasets to your own path.
 #### Training datasets
-1. **Synthetic:**  [PubChem](https://www.dropbox.com/s/mxvm5i8139y5cvk/pubchem.zip?dl=0)
-2. **Realistic:**  [USPTO](https://www.dropbox.com/s/3podz99nuwagudy/uspto_mol.zip?dl=0)
+1. **Synthetic:**  [PubChem](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/train_pubchem.csv)
+2. **Realistic:**  [USPTO](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/train_uspto.zip)
 
 #### Testing datasets
 1. **Synthetic:**  [Indigo, ChemDraw](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/synthetic.zip)
