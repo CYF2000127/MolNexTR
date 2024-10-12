@@ -5,18 +5,17 @@ import numpy as np
 import multiprocessing
 import rdkit
 import rdkit.Chem as Chem
-rdkit.RDLogger.DisableLog('rdApp.*')
+rdkit.RDLogger.DisableLog('rdApp.*')  # Disable RDKit warnings
 from SmilesPE.pretokenizer import atomwise_tokenizer
-from .abbrs import RGROUP_SYMBOLS, ABBREVIATIONS, VALENCES, FORMULA_REGEX,SUBSTITUTIONS
+from .abbrs import RGROUP_SYMBOLS, ABBREVIATIONS, VALENCES, FORMULA_REGEX, SUBSTITUTIONS
 import difflib
 import re
 
-
-
-
+# Function to calculate similarity ratio between two strings
 def similarity_str(str1, str2):
     return difflib.SequenceMatcher(None, str1, str2).ratio()
 
+# Extract stereochemistry information from a SMILES string
 def stereochemistry_extraction(smiles):
     stereochemistry = []
     tokens = smiles.split('[')
@@ -31,10 +30,9 @@ def stereochemistry_extraction(smiles):
             stereochemistry.append((i, "C@@"))
     return stereochemistry
 
-
+# Expand an abbreviation into its SMILES representation using fuzzy matching
 def _expand_abbreviation_(abbrev, threshold=0.8):
-
-    # If abbreviation is directly in the dictionary
+    # Direct match in the substitution list
     for substitution in SUBSTITUTIONS:
         if abbrev in substitution.abbrvs:
             return substitution.smiles
@@ -55,16 +53,18 @@ def _expand_abbreviation_(abbrev, threshold=0.8):
             if closest_abbrev in substitution.abbrvs:
                 return substitution.smiles
 
-    # Existing logic for RGROUPs or others
+    # Handle RGROUP symbols or others
     if abbrev in RGROUP_SYMBOLS or (abbrev[0] == 'R' and abbrev[1:].isdigit()):
         if abbrev[1:].isdigit():
             return f'[{abbrev[1:]}*]'
         return '*'
     return f'[{abbrev}]'
+
+# Simpler version of abbreviation expansion without fuzzy matching
 def _expand_abbreviation(abbrev):
     """
-    Expand abbreviation into its SMILES; also converts [Rn] to [n*]
-    Used in `_condensed_formula_list_to_smiles` when encountering abbrev. in condensed formula
+    Expand abbreviation into its SMILES representation; also converts [Rn] to [n*].
+    Used when encountering abbreviations in condensed formulae.
     """
     if abbrev in ABBREVIATIONS:
         return ABBREVIATIONS[abbrev].smiles
@@ -74,10 +74,7 @@ def _expand_abbreviation(abbrev):
         return '*'
     return f'[{abbrev}]'
 
-
-
-
-
+# Convert a SMILES string to an InChI string
 def _convert_smiles_to_inchi(smiles):
     try:
         mol = Chem.MolFromSmiles(smiles)
@@ -86,6 +83,7 @@ def _convert_smiles_to_inchi(smiles):
         inchi = None
     return inchi
 
+# Check if a molecular structure is valid given its SMILES or InChI format
 def is_valid_mol(s, format_='atomtok'):
     if format_ == 'atomtok':
         mol = Chem.MolFromSmiles(s)
@@ -94,10 +92,10 @@ def is_valid_mol(s, format_='atomtok'):
             s = f"InChI=1S/{s}"
         mol = Chem.MolFromInchi(s)
     else:
-        raise NotImplemented
+        raise NotImplementedError
     return mol is not None
 
-
+# Convert a list of SMILES strings to InChI using multiprocessing
 def convert_smiles_to_inchi(smiles_list, num_workers=16):
     with multiprocessing.Pool(num_workers) as p:
         inchi_list = p.map(_convert_smiles_to_inchi, smiles_list, chunksize=128)
@@ -106,7 +104,7 @@ def convert_smiles_to_inchi(smiles_list, num_workers=16):
     inchi_list = [x if x else 'InChI=1S/H2O/h1H2' for x in inchi_list]
     return inchi_list, r_success
 
-
+# Merge two InChI lists, replacing any placeholder InChI strings with real InChI values
 def merge_inchi(inchi1, inchi2):
     replaced = 0
     inchi1 = copy.deepcopy(inchi1)
@@ -116,22 +114,22 @@ def merge_inchi(inchi1, inchi2):
             replaced += 1
     return inchi1, replaced
 
-
+# Get the number of atoms in a molecule from its SMILES representation
 def _get_num_atoms(smiles):
     try:
         return Chem.MolFromSmiles(smiles).GetNumAtoms()
     except:
         return 0
 
-
+# Get the number of atoms for a list of SMILES strings using multiprocessing
 def get_num_atoms(smiles, num_workers=16):
-    if type(smiles) is str:
+    if isinstance(smiles, str):
         return _get_num_atoms(smiles)
     with multiprocessing.Pool(num_workers) as p:
         num_atoms = p.map(_get_num_atoms, smiles)
     return num_atoms
 
-
+# Normalize node coordinates for a molecule graph
 def normalize_nodes(nodes, flip_y=True):
     x, y = nodes[:, 0], nodes[:, 1]
     minx, maxx = min(x), max(x)
@@ -143,24 +141,23 @@ def normalize_nodes(nodes, flip_y=True):
         y = (y - miny) / max(maxy - miny, 1e-6)
     return np.stack([x, y], axis=1)
 
-
+# Verify and assign chirality to a molecule, correcting stereochemistry issues if necessary
 def _verify_chirality(mol, coords, symbols, edges, debug=False):
     try:
         n = mol.GetNumAtoms()
-        # Make a temp mol to find chiral centers
         mol_tmp = mol.GetMol()
         Chem.SanitizeMol(mol_tmp)
 
         chiral_centers = Chem.FindMolChiralCenters(
             mol_tmp, includeUnassigned=True, includeCIP=False, useLegacyImplementation=False)
-        chiral_center_ids = [idx for idx, _ in chiral_centers]  # List[Tuple[int, any]] -> List[int]
+        chiral_center_ids = [idx for idx, _]  # Extract atom IDs for chiral centers
 
-        # correction to clear pre-condition violation (for some corner cases)
+        # Clear bond directions for single bonds
         for bond in mol.GetBonds():
             if bond.GetBondType() == Chem.BondType.SINGLE:
                 bond.SetBondDir(Chem.BondDir.NONE)
 
-        # Create conformer from 2D coordinate
+        # Create 3D conformer
         conf = Chem.Conformer(n)
         conf.Set3D(True)
         for i, (x, y) in enumerate(coords):
@@ -169,6 +166,8 @@ def _verify_chirality(mol, coords, symbols, edges, debug=False):
         Chem.SanitizeMol(mol)
         Chem.AssignStereochemistryFrom3D(mol)
         mol.RemoveAllConformers()
+
+        # Recreate 2D conformer
         conf = Chem.Conformer(n)
         conf.Set3D(False)
         for i, (x, y) in enumerate(coords):
@@ -181,23 +180,22 @@ def _verify_chirality(mol, coords, symbols, edges, debug=False):
         for i in chiral_center_ids:
             for j in range(n):
                 if edges[i][j] == 5:
-                    #assert edges[j][i] == 6
                     mol.RemoveBond(i, j)
                     mol.AddBond(i, j, Chem.BondType.SINGLE)
                     mol.GetBondBetweenAtoms(i, j).SetBondDir(Chem.BondDir.BEGINWEDGE)
                 elif edges[i][j] == 6:
-                    #assert edges[j][i] == 5
                     mol.RemoveBond(i, j)
                     mol.AddBond(i, j, Chem.BondType.SINGLE)
-                    mol.GetBondBetweenAtoms(i, j).SetBondDir(Chem.BondDir.BEGINDASH)#虚线
+                    mol.GetBondBetweenAtoms(i, j).SetBondDir(Chem.BondDir.BEGINDASH)  # Dashed bond
 
             Chem.AssignChiralTypesFromBondDirs(mol)
             Chem.AssignStereochemistry(mol, force=False)
 
-
+        # Remove chiral tags from non-carbon atoms
         for atom in mol.GetAtoms():
             if atom.GetSymbol() != "C":
                 atom.SetChiralTag(Chem.rdchem.ChiralType.CHI_UNSPECIFIED)
+
         mol = mol.GetMol()
 
     except Exception as e:
