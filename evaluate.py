@@ -12,34 +12,51 @@ from SmilesPE.pretokenizer import atomwise_tokenizer
 
 
 def get_args():
+    """
+    Parse and return command-line arguments.
+    """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--gold_file', type=str, required=True)
-    parser.add_argument('--pred_file', type=str, required=True)
-    parser.add_argument('--pred_field', type=str, default='SMILES')
-    parser.add_argument('--num_workers', type=int, default=16)
-    parser.add_argument('--tanimoto', action='store_true')
-    parser.add_argument('--keep_main', action='store_true')
-    args = parser.parse_args()
-    return args
+    parser.add_argument('--gold_file', type=str, required=True, help="Path to the file containing gold SMILES strings.")
+    parser.add_argument('--pred_file', type=str, required=True, help="Path to the file containing predicted SMILES strings.")
+    parser.add_argument('--pred_field', type=str, default='SMILES', help="Column name for SMILES in the prediction file.")
+    parser.add_argument('--num_workers', type=int, default=16, help="Number of parallel workers for multiprocessing.")
+    parser.add_argument('--tanimoto', action='store_true', help="Calculate Tanimoto similarity if set.")
+    parser.add_argument('--keep_main', action='store_true', help="Keep only the main molecule fragment.")
+    return parser.parse_args()
 
 
 def canonicalize_smiles(smiles, ignore_chiral=False, ignore_cistrans=False, replace_rgroup=True):
-    if type(smiles) is not str or smiles == '':
+    """
+    Canonicalize a SMILES string with options to ignore chirality, cis/trans stereochemistry, and replace R groups.
+
+    Args:
+        smiles (str): SMILES string to canonicalize.
+        ignore_chiral (bool): If True, ignore chirality during canonicalization.
+        ignore_cistrans (bool): If True, ignore cis/trans stereochemistry.
+        replace_rgroup (bool): If True, replace R groups with wildcard characters.
+
+    Returns:
+        str: Canonicalized SMILES string.
+        bool: True if successful, False otherwise.
+    """
+    if not isinstance(smiles, str) or smiles == '':
         return '', False
+    # Modify SMILES based on cis/trans and R group options
     if ignore_cistrans:
         smiles = smiles.replace('/', '').replace('\\', '')
     if replace_rgroup:
         tokens = atomwise_tokenizer(smiles)
         for j, token in enumerate(tokens):
-            if token[0] == '[' and token[-1] == ']':
+            if token.startswith('[') and token.endswith(']'):
                 symbol = token[1:-1]
-                if symbol[0] == 'R' and symbol[1:].isdigit():
+                if symbol.startswith('R') and symbol[1:].isdigit():
                     tokens[j] = f'[{symbol[1:]}*]'
                 elif Chem.AtomFromSmiles(token) is None:
                     tokens[j] = '*'
         smiles = ''.join(tokens)
+    # Attempt to canonicalize SMILES
     try:
-        canon_smiles = Chem.CanonSmiles(smiles, useChiral=(not ignore_chiral))
+        canon_smiles = Chem.CanonSmiles(smiles, useChiral=not ignore_chiral)
         success = True
     except:
         canon_smiles = smiles
@@ -47,8 +64,21 @@ def canonicalize_smiles(smiles, ignore_chiral=False, ignore_cistrans=False, repl
     return canon_smiles, success
 
 
-def convert_smiles_to_canonsmiles(
-        smiles_list, ignore_chiral=False, ignore_cistrans=False, replace_rgroup=True, num_workers=16):
+def convert_smiles_to_canonsmiles(smiles_list, ignore_chiral=False, ignore_cistrans=False, replace_rgroup=True, num_workers=16):
+    """
+    Convert a list of SMILES strings to canonical SMILES using parallel processing.
+
+    Args:
+        smiles_list (list): List of SMILES strings.
+        ignore_chiral (bool): If True, ignore chirality during canonicalization.
+        ignore_cistrans (bool): If True, ignore cis/trans stereochemistry.
+        replace_rgroup (bool): If True, replace R groups with wildcard characters.
+        num_workers (int): Number of parallel workers.
+
+    Returns:
+        list: List of canonical SMILES strings.
+        float: Average success rate of the conversion.
+    """
     with multiprocessing.Pool(num_workers) as p:
         results = p.starmap(canonicalize_smiles,
                             [(smiles, ignore_chiral, ignore_cistrans, replace_rgroup) for smiles in smiles_list],
@@ -57,44 +87,83 @@ def convert_smiles_to_canonsmiles(
     return list(canon_smiles), np.mean(success)
 
 
-def _keep_main_molecule(smiles, debug=False):
+def _keep_main_molecule(smiles):
+    """
+    Retain only the main (largest) molecule fragment from a SMILES string.
+
+    Args:
+        smiles (str): SMILES string.
+
+    Returns:
+        str: SMILES string for the main fragment.
+    """
     try:
         mol = Chem.MolFromSmiles(smiles)
         frags = Chem.GetMolFrags(mol, asMols=True)
         if len(frags) > 1:
-            num_atoms = [m.GetNumAtoms() for m in frags]
-            main_mol = frags[np.argmax(num_atoms)]
-            smiles = Chem.MolToSmiles(main_mol)
-    except Exception as e:
+            main_mol = max(frags, key=lambda m: m.GetNumAtoms())
+            return Chem.MolToSmiles(main_mol)
+    except Exception:
         pass
     return smiles
 
 
-def keep_main_molecule(smiles, num_workers=16):
+def keep_main_molecule(smiles_list, num_workers=16):
+    """
+    Process a list of SMILES strings to retain only the main molecule fragments using parallel processing.
+
+    Args:
+        smiles_list (list): List of SMILES strings.
+        num_workers (int): Number of parallel workers.
+
+    Returns:
+        list: List of SMILES strings with only the main fragment retained.
+    """
     with multiprocessing.Pool(num_workers) as p:
-        results = p.map(_keep_main_molecule, smiles, chunksize=128)
+        results = p.map(_keep_main_molecule, smiles_list, chunksize=128)
     return results
 
 
 def tanimoto_similarity(smiles1, smiles2):
+    """
+    Compute the Tanimoto similarity between two SMILES strings.
+
+    Args:
+        smiles1 (str): First SMILES string.
+        smiles2 (str): Second SMILES string.
+
+    Returns:
+        float: Tanimoto similarity score.
+    """
     try:
-        mol1 = Chem.MolFromSmiles(smiles1)
-        mol2 = Chem.MolFromSmiles(smiles2)
-        fp1 = Chem.RDKFingerprint(mol1)
-        fp2 = Chem.RDKFingerprint(mol2)
-        tanimoto = DataStructs.FingerprintSimilarity(fp1, fp2)
-        return tanimoto
+        mol1, mol2 = Chem.MolFromSmiles(smiles1), Chem.MolFromSmiles(smiles2)
+        fp1, fp2 = Chem.RDKFingerprint(mol1), Chem.RDKFingerprint(mol2)
+        return DataStructs.FingerprintSimilarity(fp1, fp2)
     except:
         return 0
 
 
 def compute_tanimoto_similarities(gold_smiles, pred_smiles, num_workers=16):
+    """
+    Calculate Tanimoto similarities for lists of gold and predicted SMILES strings using parallel processing.
+
+    Args:
+        gold_smiles (list): List of gold SMILES strings.
+        pred_smiles (list): List of predicted SMILES strings.
+        num_workers (int): Number of parallel workers.
+
+    Returns:
+        list: List of Tanimoto similarity scores.
+    """
     with multiprocessing.Pool(num_workers) as p:
-        similarities = p.starmap(tanimoto_similarity, [(gs, ps) for gs, ps in zip(gold_smiles, pred_smiles)])
+        similarities = p.starmap(tanimoto_similarity, zip(gold_smiles, pred_smiles))
     return similarities
 
 
-class SmilesEvaluator(object):
+class SmilesEvaluator:
+    """
+    Evaluator for comparing gold and predicted SMILES strings, with options for Tanimoto similarity and chirality evaluation.
+    """
     def __init__(self, gold_smiles, num_workers=16, tanimoto=False):
         self.gold_smiles = gold_smiles
         self.num_workers = num_workers
@@ -114,6 +183,16 @@ class SmilesEvaluator(object):
                 for smiles in smiles_list]
 
     def evaluate(self, pred_smiles, include_details=False):
+        """
+        Evaluate the predicted SMILES strings against the gold standard.
+
+        Args:
+            pred_smiles (list): List of predicted SMILES strings.
+            include_details (bool): If True, include detailed match information.
+
+        Returns:
+            dict: Evaluation metrics including Tanimoto similarity and canonical SMILES accuracy.
+        """
         results = {}
         if self.tanimoto:
             results['tanimoto'] = np.mean(compute_tanimoto_similarities(self.gold_smiles, pred_smiles))
