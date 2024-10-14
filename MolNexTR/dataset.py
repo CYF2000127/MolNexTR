@@ -26,7 +26,7 @@ from .tokenization import PAD_ID
 from .chemical import get_num_atoms, normalize_nodes
 from .abbrs import RGROUP_SYMBOLS, SUBSTITUTIONS, ELEMENTS, COLORS
 
-# Limit OpenCV to use a single thread to prevent CPU overuse
+# Limit OpenCV to use a single thread to prevent CPU overuses
 cv2.setNumThreads(1)
 
 # Constants controlling probabilities for various transformations and augmentations
