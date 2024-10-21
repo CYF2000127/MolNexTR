@@ -5,8 +5,8 @@ NUM_GPUS_PER_NODE=2
 NODE_RANK=0
 MASTER_PORT=$(shuf -n 1 -i 10000-65535)
 BATCH_SIZE=8
-LOAD_PATH=/
-SAVE_PATH=/
+LOAD_PATH=checkpoints/molnextr_best.pth
+SAVE_PATH=predict_output
 mkdir -p ${SAVE_PATH}
 
 set -x
