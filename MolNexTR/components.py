@@ -6,10 +6,10 @@ import torch.nn.functional as F
 
 import timm
 
-from .utils import FORMAT_INFO, to_device
-from .tokenization import SOS_ID, EOS_ID, PAD_ID, MASK_ID
-from .decoding import GreedySearch, BeamSearch
-from .models import TransformerDecoder, Embeddings
+from MolNexTR.utils import FORMAT_INFO, to_device
+from MolNexTR.tokenization import SOS_ID, EOS_ID, PAD_ID, MASK_ID
+from MolNexTR.decoding import GreedySearch, BeamSearch
+from MolNexTR.models import TransformerDecoder, Embeddings
 
 class _PositionAttentionModule(nn.Module):
     """ Position attention module"""

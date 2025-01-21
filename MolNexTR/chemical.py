@@ -7,7 +7,7 @@ import rdkit
 import rdkit.Chem as Chem
 rdkit.RDLogger.DisableLog('rdApp.*')
 from SmilesPE.pretokenizer import atomwise_tokenizer
-from .abbrs import RGROUP_SYMBOLS, ABBREVIATIONS, VALENCES, FORMULA_REGEX,SUBSTITUTIONS
+from MolNexTR.abbrs import RGROUP_SYMBOLS, ABBREVIATIONS, VALENCES, FORMULA_REGEX,SUBSTITUTIONS
 import difflib
 import re
 

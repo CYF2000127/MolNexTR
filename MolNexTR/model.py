@@ -9,10 +9,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 
-from .dataset import get_transforms
-from .components import Encoder, Decoder
-from .chemical import convert_graph_to_smiles
-from .tokenization import get_tokenizer
+from MolNexTR.dataset import get_transforms
+from MolNexTR.components import Encoder, Decoder
+from MolNexTR.chemical import convert_graph_to_smiles
+from MolNexTR.tokenization import get_tokenizer
 
 def loading(module, module_states):
     """
