@@ -23,7 +23,9 @@ setuptools.setup(
         "timm==0.4.12",
         "pyonmttok==1.37.1",
         "OpenNMT-py==2.2.0",
-
+        "matplotlib",
+        "pandas",
+        "rdkit",
     ],
     package_data={"MolNexTR": ["decoding/*.*", "indigo/*.*", "models/*.*","vocab/*.*"]},
     classifiers=[
