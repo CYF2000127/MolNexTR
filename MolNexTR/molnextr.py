@@ -69,27 +69,37 @@ def get_predictions(
 ):
     """
     Generate predictions from the MolNexTR model for a given chemical structure image.
-
     This function processes the input image and returns predictions in various formats,
     including SMILES strings, molecular files, or atom-bond mappings.
-
     Args:
         imagepath (str): Path to the input image containing the chemical structure.
         atoms_bonds (bool, optional): Whether to return atom-bond mappings in the predictions. Defaults to False.
         smiles (bool, optional): Whether to return the predicted SMILES string. Defaults to True.
         predicted_molfile (bool, optional): Whether to return the predicted molecular file. Defaults to False.
         model: The MolNexTR model instance to use for predictions. Defaults to `MolNexTR_model`.
-
     Returns:
-        dict or str: The prediction results. Returns a dictionary containing various prediction outputs
-                     if neither `smiles` nor `predicted_molfile` is True. Otherwise, returns the specific
-                     requested format as a string.
+        dict: The prediction results. Returns a dictionary containing the requested output formats
+              based on the boolean flags provided.
     """
+    # Get predictions with atoms_bonds if requested
     predictions = model.predict_final_results(imagepath, return_atoms_bonds=atoms_bonds)
-
+    
+    # Initialize result dictionary
+    result = {}
+    
+    # Add requested outputs to the result dictionary
     if smiles:
-        return predictions["predicted_smiles"]
+        result["predicted_smiles"] = predictions["predicted_smiles"]
+    
+    if atoms_bonds:
+        result["atom_sets"] = predictions["atom_sets"]
+    
     if predicted_molfile:
-        return predictions["predicted_molfile"]
-
-    return predictions
+        result["predicted_molfile"] = predictions["predicted_molfile"]
+    
+    # If no specific outputs were requested, return all available predictions
+    if not (smiles or atoms_bonds or predicted_molfile):
+        return predictions
+    
+    # Return the result dictionary with all requested outputs
+    return result
