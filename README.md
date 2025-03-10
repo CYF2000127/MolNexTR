@@ -12,6 +12,9 @@ Overview of our MolNexTR model.
 </div> 
 
 ## Using the code and the model
+
+Note: Models could be downloaded from [Hugging Face Repo](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/molnextr_best.pth) or Zenodo Repo: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13304899.svg)](https://doi.org/10.5281/zenodo.13304899) 
+
 ### Using the code
 Clone the following repositories:
 ```
@@ -24,30 +27,19 @@ conda create -n molnextr python=3.8
 conda activate molnextr
 ```
 
-2. Then Install requirements:
+2. Then Install using pip:
 ```
-pip install -r requirements.txt
-```
-Alternatively, directly use the following command:
-```
-conda env create -f environment.yml
+pip install git+https://github.com/CYF2000127/MolNexTR
 ```
 
-
-3. Download the model checkpoint from our [Hugging Face Repo](https://huggingface.co/datasets/CYF200127/MolNexTR/blob/main/molnextr_best.pth) or Zenodo Repo: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13304899.svg)](https://doi.org/10.5281/zenodo.13304899) and put in your own path 
-
-4. Run the following code to predict molecular images:
+3. Run the following code to predict molecular images:
 ```python
-import torch
-from MolNexTR import molnextr
+import MolNexTR
 Image = './examples/1.png'
-Model = './checkpoints/molnextr_best.pth'
-device = torch.device('cpu')
-model = molnextr(Model, device)
-predictions = model.predict_final_results(Image, return_atoms_bonds=True)
+predictions = MolNexTR.get_predictions(Image, atoms_bonds=True, smiles=True, predicted_molfile=True) # atoms_bonds and predicted_molfile are optional
 print(predictions)
 ```
-or use [`prediction.ipynb`](prediction.ipynb). You can also change the image and model path to your own images and models.
+or use [`prediction.ipynb`](prediction.ipynb). You can also change the image and model path to your images and models.
 
 The input is a molecular image 
 ![visualization](examples/1.png)
