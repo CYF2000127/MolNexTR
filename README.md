@@ -49,7 +49,7 @@ print(predictions)
 ```
 or use [`prediction.ipynb`](prediction.ipynb). You can also change the image and model path to your own images and models.
 
-The input is a molecular image 
+The input is a molecular image:
 ![visualization](examples/1.png)
 <div align="center",width="50">
 Example input molecular image.
