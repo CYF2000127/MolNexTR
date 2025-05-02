@@ -1,5 +1,5 @@
 # MolNexTR [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13857412.svg)](https://doi.org/10.5281/zenodo.13857412)
-
+This is the official code of the paper "MolNexTR: a generalized deep learning model for molecular image recognition".
 
 ## :sparkles: Highlights
 <p align="justify">
