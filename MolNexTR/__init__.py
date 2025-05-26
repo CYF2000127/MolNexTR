@@ -5,3 +5,4 @@ __all__ = [
 ]
 
 from .molnextr import get_predictions
+from .molnextr import MolNexTRSingleton
