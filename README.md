@@ -11,6 +11,9 @@ In this work, We propose MolNexTR, a novel graph generation model. The model fol
 Overview of our MolNexTR model.
 </div> 
 
+:sparkles: Please check out our newest work on versatile and multimodal information extraction from the chemical literature using a multi-agent system!
+ChemEAGLE:[paper](https://arxiv.org/abs/2507.20230), [code](https://github.com/CYF2000127/ChemEagle) 
+
 ## :rocket: Using the code and the model
 ### Using the code
 Clone the following repositories:
