@@ -13,83 +13,135 @@ import re
 
 
 
-# Function to calculate similarity ratio between two strings
-def similarity_str(str1, str2):
-    return difflib.SequenceMatcher(None, str1, str2).ratio()
+def get_smiles_stereo_list(smiles):
+    pat = re.compile(r'\[C@[\w\d]*\]|\[C@@[\w\d]*\]')
+    lst = []
+    for m in pat.finditer(smiles):
+        if '@@' in m.group():
+            lst.append('@@')
+        else:
+            lst.append('@')
+    return lst
 
-# Extract stereochemistry information from a SMILES string
-def stereochemistry_extraction(smiles):
-    stereochemistry = []
-    tokens = smiles.split('[')
-    for i, token in enumerate(tokens):
-        if "C@H]" in token:
-            stereochemistry.append((i, "C@H"))
-        elif "C@@H]" in token:
-            stereochemistry.append((i, "C@@H"))
-        elif "C@]" in token:
-            stereochemistry.append((i, "C@"))
-        elif "C@@]" in token:
-            stereochemistry.append((i, "C@@"))
-    return stereochemistry
+def flip_stereo_in_smiles(smiles, flip_indices):
+    pat = re.compile(r'\[C@[\w\d]*\]|\[C@@[\w\d]*\]')
+    matches = list(pat.finditer(smiles))
+    assert len(matches) >= max(flip_indices, default=-1) + 1, "索引越界"
+    smiles_new = smiles
+    offset = 0
+    for idx in flip_indices:
+        m = matches[idx]
+        start, end = m.start() + offset, m.end() + offset
+        orig = smiles_new[start:end]
+        if '@@' in orig:
+            flipped = orig.replace('@@', '@')
+        else:
+            flipped = orig.replace('@', '@@')
+        smiles_new = smiles_new[:start] + flipped + smiles_new[end:]
+        offset += len(flipped) - len(orig)
+    return smiles_new
 
-# Expand an abbreviation into its SMILES representation using fuzzy matching
-def _expand_abbreviation_(abbrev, threshold=0.8):
+def chirality_sign(coords):
+    p0, p1, p2 = coords[:3]
+    v1 = np.array([p1.x - p0.x, p1.y - p0.y])
+    v2 = np.array([p2.x - p0.x, p2.y - p0.y])
+    cross = v1[0]*v2[1] - v1[1]*v2[0]
+    return np.sign(cross)
 
-    # If abbreviation is directly in the dictionary
-    for substitution in SUBSTITUTIONS:
-        if abbrev in substitution.abbrvs:
-            return substitution.smiles
-
-    # Fuzzy matching with predefined abbreviations
-    closest_abbrev = None
-    max_similarity = 0
-
-    for substitution in SUBSTITUTIONS:
-        for known_abbrev in substitution.abbrvs:
-            similarity = similarity_str(abbrev, known_abbrev)
-            if similarity > max_similarity:
-                max_similarity = similarity
-                closest_abbrev = known_abbrev
-
-    if max_similarity >= threshold:
-        for substitution in SUBSTITUTIONS:
-            if closest_abbrev in substitution.abbrvs:
-                return substitution.smiles
-
-    # Existing logic for RGROUPs or others
-    if abbrev in RGROUP_SYMBOLS or (abbrev[0] == 'R' and abbrev[1:].isdigit()):
-        if abbrev[1:].isdigit():
-            return f'[{abbrev[1:]}*]'
-        return '*'
-    return f'[{abbrev}]'
-
-# Simpler version of abbreviation expansion without fuzzy matching
-def _expand_abbreviation(abbrev):
-    """
-    Expand abbreviation into its SMILES; also converts [Rn] to [n*]
-    Used in `_condensed_formula_list_to_smiles` when encountering abbrev. in condensed formula
-    """
-    if abbrev in ABBREVIATIONS:
-        return ABBREVIATIONS[abbrev].smiles
-    if abbrev in RGROUP_SYMBOLS or (abbrev[0] == 'R' and abbrev[1:].isdigit()):
-        if abbrev[1:].isdigit():
-            return f'[{abbrev[1:]}*]'
-        return '*'
-    return f'[{abbrev}]'
-
-
-
-
-# Convert a SMILES string to an InChI string
-def _convert_smiles_to_inchi(smiles):
+def align_chirality(smiles1, smiles2):
     try:
-        mol = Chem.MolFromSmiles(smiles)
-        inchi = Chem.MolToInchi(mol)
-    except:
-        inchi = None
-    return inchi
+        mol1 = Chem.MolFromSmiles(smiles1)
+        mol2 = Chem.MolFromSmiles(smiles2)
 
-# Check if a molecular structure is valid given its SMILES or InChI format
+        # 1. Find MCS
+        res = rdFMCS.FindMCS([mol1, mol2],
+                             atomCompare=rdFMCS.AtomCompare.CompareElements,
+                             bondCompare=rdFMCS.BondCompare.CompareOrder)
+        mcs_mol = Chem.MolFromSmarts(res.smartsString)
+        match1 = mol1.GetSubstructMatch(mcs_mol)
+        match2 = mol2.GetSubstructMatch(mcs_mol)
+        if not match1 or not match2:
+            print("MCS映射失败，输出原始smiles2")
+            return smiles2
+        #print(f"mol1 MCS atoms: {match1}")
+        #print(f"mol2 MCS atoms: {match2}")
+
+        # 2. 2D coords for spatial arrangement comparison
+        rdDepictor.Compute2DCoords(mol1)
+        rdDepictor.Compute2DCoords(mol2)
+        coords1 = [mol1.GetConformer().GetAtomPosition(i) for i in match1]
+        coords2 = [mol2.GetConformer().GetAtomPosition(i) for i in match2]
+        sign1 = chirality_sign(coords1)
+        sign2 = chirality_sign(coords2)
+        #print(f"mol1骨架排列: {sign1}，mol2骨架排列: {sign2}")
+        is_mirror = (sign1 != sign2)
+
+        # 3. Find chiral centers
+        chiral1 = list(Chem.FindMolChiralCenters(mol1, includeUnassigned=False, includeCIP=True))
+        chiral2 = list(Chem.FindMolChiralCenters(mol2, includeUnassigned=False, includeCIP=True))
+        #print(f"mol1 chiral centers: {chiral1}")
+        #print(f"mol2 chiral centers: {chiral2}")
+
+        if len(chiral1) == 0:
+            # 没有绝对手性，按SMILES手性符号逐一对齐
+            stereo1 = get_smiles_stereo_list(smiles1)
+            stereo2 = get_smiles_stereo_list(smiles2)
+            #print("smiles1手性符号顺序:", stereo1)
+            #print("smiles2手性符号顺序:", stereo2)
+            flip_indices = []
+            for i, (s1, s2) in enumerate(zip(stereo1, stereo2)):
+                target = s1 if not is_mirror else ('@@' if s1 == '@' else '@')
+                if s2 != target:
+                    flip_indices.append(i)
+            #print("需要flip的手性符号索引:", flip_indices)
+            output_smiles2 = flip_stereo_in_smiles(smiles2, flip_indices)
+            #print("对齐后smiles2:", output_smiles2)
+            return output_smiles2
+        if len(chiral1) != 0 and len(chiral2) != len(chiral1):
+            #print("mol1,2有多个手性中心单没对齐，直接输出原始smiles2")
+            return smiles2
+
+        # 正常对齐手性（绝对R/S对齐）
+        mol2_edit = Chem.RWMol(mol2)
+        chiral1_dict = dict(chiral1)
+        chiral2_dict = dict(chiral2)
+        for i, idx1 in enumerate(match1):
+            idx2 = match2[i]
+            if idx1 in chiral1_dict:
+                ref_chirality = chiral1_dict[idx1]
+                if is_mirror:
+                    ref_chirality = {'R':'S','S':'R'}.get(ref_chirality, ref_chirality)
+                rs2 = chiral2_dict.get(idx2, None)
+                #print(f"mol1原子{idx1}({ref_chirality}) <-> mol2原子{idx2}({rs2})")
+                if rs2 is None:
+                    pass
+                elif ref_chirality == rs2:
+                    pass
+                else:
+                    atom = mol2_edit.GetAtomWithIdx(idx2)
+                    tag = atom.GetChiralTag()
+                    if tag == Chem.CHI_TETRAHEDRAL_CW:
+                        atom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CCW)
+                    elif tag == Chem.CHI_TETRAHEDRAL_CCW:
+                        atom.SetChiralTag(Chem.CHI_TETRAHEDRAL_CW)
+
+        mol2_new = mol2_edit.GetMol()
+        Chem.SanitizeMol(mol2_new)
+        smiles2_new = Chem.MolToSmiles(mol2_new, isomericSmiles=True)
+        #print("手性对齐后的smiles2:", smiles2_new)
+        return smiles2_new
+
+    except Exception as e:
+        print(f"发生异常，输出原始smiles2: {e}")
+        return smiles2
+    
+
+
+
+
+
+
+
 def is_valid_mol(s, format_='atomtok'):
     if format_ == 'atomtok':
         mol = Chem.MolFromSmiles(s)
@@ -102,8 +154,15 @@ def is_valid_mol(s, format_='atomtok'):
     return mol is not None
 
 
+def _convert_smiles_to_inchi(smiles):
+    try:
+        mol = Chem.MolFromSmiles(smiles)
+        inchi = Chem.MolToInchi(mol)
+    except:
+        inchi = None
+    return inchi
 
-# Convert a list of SMILES strings to InChI using multiprocessing
+
 def convert_smiles_to_inchi(smiles_list, num_workers=16):
     with multiprocessing.Pool(num_workers) as p:
         inchi_list = p.map(_convert_smiles_to_inchi, smiles_list, chunksize=128)
@@ -113,7 +172,6 @@ def convert_smiles_to_inchi(smiles_list, num_workers=16):
     return inchi_list, r_success
 
 
-# Merge two InChI lists, replacing any placeholder InChI strings with real InChI values
 def merge_inchi(inchi1, inchi2):
     replaced = 0
     inchi1 = copy.deepcopy(inchi1)
@@ -124,14 +182,13 @@ def merge_inchi(inchi1, inchi2):
     return inchi1, replaced
 
 
-# Get the number of atoms in a molecule from its SMILES representation
 def _get_num_atoms(smiles):
     try:
         return Chem.MolFromSmiles(smiles).GetNumAtoms()
     except:
         return 0
 
-# Get the number of atoms for a list of SMILES strings using multiprocessing
+
 def get_num_atoms(smiles, num_workers=16):
     if type(smiles) is str:
         return _get_num_atoms(smiles)
@@ -155,14 +212,24 @@ def normalize_nodes(nodes, flip_y=True):
 def _verify_chirality(mol, coords, symbols, edges, debug=False):
     try:
         n = mol.GetNumAtoms()
+        
         # Make a temp mol to find chiral centers
         mol_tmp = mol.GetMol()
+        
         Chem.SanitizeMol(mol_tmp)
+        #print(f"n: {n}", f"mol_tmp: {mol_tmp}")
 
-        chiral_centers = Chem.FindMolChiralCenters(
-            mol_tmp, includeUnassigned=True, includeCIP=False, useLegacyImplementation=False)
-        chiral_center_ids = [idx for idx, _ in chiral_centers]  # List[Tuple[int, any]] -> List[int]
+        # chiral_centers = Chem.FindMolChiralCenters(
+        #     mol_tmp, includeUnassigned=True, includeCIP=False, useLegacyImplementation=False)
+        # chiral_center_ids = [idx for idx, _ in chiral_centers]
+        # print(f"chiral_center_ids: {chiral_center_ids}")  # List[Tuple[int, any]] -> List[int]
 
+        # if not chiral_center_ids:
+        # # symbols 是一个原子符号列表（如 ['[F3C]', '[C@]', ...]）
+        chiral_tags = ['[C@]', '[C@@]', '[C@H]', '[C@@H]']
+        chiral_center_ids = [i for i, sym in enumerate(symbols) if any(tag in sym for tag in chiral_tags)]
+        print(f"chiral_center_ids (from symbols): {chiral_center_ids}")
+        
         # correction to clear pre-condition violation (for some corner cases)
         for bond in mol.GetBonds():
             if bond.GetBondType() == Chem.BondType.SINGLE:
@@ -176,33 +243,38 @@ def _verify_chirality(mol, coords, symbols, edges, debug=False):
         mol.AddConformer(conf)
         Chem.SanitizeMol(mol)
         Chem.AssignStereochemistryFrom3D(mol)
+        # NOTE: seems that only AssignStereochemistryFrom3D can handle double bond E/Z
+        # So we do this first, remove the conformer and add back the 2D conformer for chiral correction
+
         mol.RemoveAllConformers()
         conf = Chem.Conformer(n)
         conf.Set3D(False)
         for i, (x, y) in enumerate(coords):
             conf.SetAtomPosition(i, (x, 1 - y, 0))
         mol.AddConformer(conf)
+
+        # Magic, inferring chirality from coordinates and BondDir. DO NOT CHANGE.
         Chem.SanitizeMol(mol)
         Chem.AssignChiralTypesFromBondDirs(mol)
-        Chem.AssignStereochemistry(mol, force=False)
+        Chem.AssignStereochemistry(mol, force=True)
 
+        # Second loop to reset any wedge/dash bond to be starting from the chiral center)
         for i in chiral_center_ids:
             for j in range(n):
                 if edges[i][j] == 5:
-                    #assert edges[j][i] == 6
+                    # assert edges[j][i] == 6
                     mol.RemoveBond(i, j)
                     mol.AddBond(i, j, Chem.BondType.SINGLE)
                     mol.GetBondBetweenAtoms(i, j).SetBondDir(Chem.BondDir.BEGINWEDGE)
                 elif edges[i][j] == 6:
-                    #assert edges[j][i] == 5
+                    # assert edges[j][i] == 5
                     mol.RemoveBond(i, j)
                     mol.AddBond(i, j, Chem.BondType.SINGLE)
-                    mol.GetBondBetweenAtoms(i, j).SetBondDir(Chem.BondDir.BEGINDASH)#虚线
-
+                    mol.GetBondBetweenAtoms(i, j).SetBondDir(Chem.BondDir.BEGINDASH)
             Chem.AssignChiralTypesFromBondDirs(mol)
-            Chem.AssignStereochemistry(mol, force=False)
+            Chem.AssignStereochemistry(mol, force=True)
 
-
+        # reset chiral tags for non-carbon atom
         for atom in mol.GetAtoms():
             if atom.GetSymbol() != "C":
                 atom.SetChiralTag(Chem.rdchem.ChiralType.CHI_UNSPECIFIED)
@@ -216,6 +288,11 @@ def _verify_chirality(mol, coords, symbols, edges, debug=False):
 
 
 def _parse_tokens(tokens: list):
+    """
+    Parse tokens of condensed formula into list of pairs `(elt, num)`
+    where `num` is the multiplicity of the atom (or nested condensed formula) `elt`
+    Used by `_parse_formula`, which does the same thing but takes a formula in string form as input
+    """
     elements = []
     i = 0
     j = 0
@@ -430,7 +507,6 @@ def get_smiles_from_symbol(symbol, mol, atom, bonds):
 
 def _replace_functional_group(smiles):
     smiles = smiles.replace('<unk>', 'C')
-    #smiles = smiles.replace('I', 'C')
     for i, r in enumerate(RGROUP_SYMBOLS):
         symbol = f'[{r}]'
         if symbol in smiles:
@@ -450,56 +526,11 @@ def _replace_functional_group(smiles):
                     isotope += 1
                 placeholder = f'[{isotope}*]'
                 mappings[isotope] = token[1:-1]
-                if token[1:-1] == 'COOMe':
-                    print(smiles)
-                    print(mappings)
-                new_tokens.append(placeholder)
-                if token[1:-1] == 'COOMe':
-                    print(''.join(new_tokens))
-                continue
-        new_tokens.append(token)
-    smiles = ''.join(new_tokens)
-    return smiles, mappings
-
-
-
-def _replace_functional_group1(smiles):
-    smiles = smiles.replace('<unk>', 'C')
-    #smiles = smiles.replace('I', 'C')
-    for i, r in enumerate(RGROUP_SYMBOLS):
-        symbol = f'[{r}]'
-        if symbol in smiles:
-            if r[0] == 'R' and r[1:].isdigit():
-                smiles = smiles.replace(symbol, f'[{int(r[1:])}*]')
-            else:
-                smiles = smiles.replace(symbol, '*')
-    # For unknown tokens (i.e. rdkit cannot parse), replace them with [{isotope}*], where isotope is an identifier.
-    tokens = atomwise_tokenizer(smiles)
-    new_tokens = []
-    mappings = {}  # isotope : symbol
-    isotope = 50
-    for token in tokens:
-        if token[0] == '[':
-            if token[1:-1] == 'COOMe':
-                #print(smiles)
-                placeholder = 'N'
-                #placeholder = f'[C=(O)OC]'
-                mappings[isotope] = 'COOMe'
-                #print(mappings)
-                new_tokens.append(placeholder)
-                print(''.join(new_tokens))
-                continue
-            elif token[1:-1] in ABBREVIATIONS or Chem.AtomFromSmiles(token) is None:
-                while f'[{isotope}*]' in smiles or f'[{isotope}*]' in new_tokens:
-                    isotope += 1
-                placeholder = f'[{isotope}*]'
-                mappings[isotope] = token[1:-1]
                 new_tokens.append(placeholder)
                 continue
         new_tokens.append(token)
     smiles = ''.join(new_tokens)
     return smiles, mappings
-
 
 
 def convert_smiles_to_mol(smiles):
@@ -518,6 +549,7 @@ BOND_TYPES = {1: Chem.rdchem.BondType.SINGLE, 2: Chem.rdchem.BondType.DOUBLE, 3:
 def _expand_functional_group(mol, mappings, debug=False):
     def _need_expand(mol, mappings):
         return any([len(Chem.GetAtomAlias(atom)) > 0 for atom in mol.GetAtoms()]) or len(mappings) > 0
+
     if _need_expand(mol, mappings):
         mol_w = Chem.RWMol(mol)
         num_atoms = mol_w.GetNumAtoms()
@@ -525,19 +557,13 @@ def _expand_functional_group(mol, mappings, debug=False):
             atom.SetNumRadicalElectrons(0)
 
         atoms_to_remove = []
-        smiles1 = Chem.MolToSmiles(mol_w)
         for i in range(num_atoms):
             atom = mol_w.GetAtomWithIdx(i)
-            if atom.GetSymbol() == '*' or atom.GetSymbol() == 'N':
+            if atom.GetSymbol() == '*':
                 symbol = Chem.GetAtomAlias(atom)
                 isotope = atom.GetIsotope()
                 if isotope > 0 and isotope in mappings:
                     symbol = mappings[isotope]
-                    #print(symbol)
-                if 'COOMe' in mappings.values():
-                    symbol = 'COOMe'
-                    #print(symbol)
-
                 if not (isinstance(symbol, str) and len(symbol) > 0):
                     continue
                 # rgroups do not need to be expanded
@@ -547,6 +573,7 @@ def _expand_functional_group(mol, mappings, debug=False):
                 bonds = atom.GetBonds()
                 sub_smiles = get_smiles_from_symbol(symbol, mol_w, atom, bonds)
 
+                # create mol object for abbreviation/condensed formula from its SMILES
                 mol_r = convert_smiles_to_mol(sub_smiles)
 
                 if mol_r is None:
@@ -565,7 +592,7 @@ def _expand_functional_group(mol, mappings, debug=False):
 
                 # get indices of atoms of main body that connect to substituent
                 bonding_atoms_w = adjacent_indices
-                #assume indices are concated after combine mol_w and mol_r
+                # assume indices are concated after combine mol_w and mol_r
                 bonding_atoms_r = [mol_w.GetNumAtoms()]
                 for atm in mol_r.GetAtoms():
                     if atm.GetNumRadicalElectrons() and atm.GetIdx() > 0:
@@ -576,46 +603,24 @@ def _expand_functional_group(mol, mappings, debug=False):
 
                 # connect substituent to main body with bonds
                 mol_w = Chem.RWMol(combo)
+                # if len(bonding_atoms_r) == 1:  # substituent uses one atom to bond to main body
                 for atm in bonding_atoms_w:
                     bond_order = mol_w.GetAtomWithIdx(atm).GetNumRadicalElectrons()
                     mol_w.AddBond(atm, bonding_atoms_r[0], order=BOND_TYPES[bond_order])
 
-                #reset radical electrons
+                # reset radical electrons
                 for atm in bonding_atoms_w:
                     mol_w.GetAtomWithIdx(atm).SetNumRadicalElectrons(0)
                 for atm in bonding_atoms_r:
                     mol_w.GetAtomWithIdx(atm).SetNumRadicalElectrons(0)
                 atoms_to_remove.append(i)
-        smiles2 = Chem.MolToSmiles(combo)
 
+        # Remove atom in the end, otherwise the id will change
+        # Reverse the order and remove atoms with larger id first
         atoms_to_remove.sort(reverse=True)
         for i in atoms_to_remove:
             mol_w.RemoveAtom(i)
-        original_stereochemistry = stereochemistry_extraction(smiles1)
-
         smiles = Chem.MolToSmiles(mol_w)
-        total_stereo_count = len(re.findall(r'\[C@[H]?\]', smiles)) + len(re.findall(r'\[C@@[H]?\]', smiles))
-
-        new_stereochemistry = stereochemistry_extraction(smiles)
-        if total_stereo_count < 3 and (re.search(r'\[5\d+\*\]\[C@[H]?\]|\[C@[H]?\]\[5\d+\*\]', smiles1) or \
-                re.search(r'\[5\d+\*\]\[C@@[H]?\]|\[C@@[H]?\]\[5\d+\*\]', smiles1)):
-            for i, (index, stereo) in enumerate(original_stereochemistry):
-                if i < len(new_stereochemistry):
-                    new_index, new_stereo = new_stereochemistry[i]
-                    if stereo != new_stereo:
-                        # 替换新生成的SMILES字符串中的手性信息以匹配原始SMILES字符串中的
-                        smiles = smiles.replace(f'[{new_stereo}]', f'[{stereo}]', 1)
-        middle_chiral_centers1 = Chem.FindMolChiralCenters(mol_w, includeUnassigned=True)
-        final_mol = Chem.MolFromSmiles(smiles)
-
-        new_chiral_centers = Chem.FindMolChiralCenters(final_mol, includeUnassigned=True)
-
-        #atom.SetChiralTag(Chem.rdchem.ChiralType.CHI_TETRAHEDRAL_CCW)  # 修改为'R'
-        #new_chiral_centers = Chem.FindMolChiralCenters(final_mol, includeUnassigned=True)
-        #smiles = Chem.MolToSmiles(final_mol)
-        #if original_chiral_centers != new_chiral_centers:
-           # print("Warning: Chirality changed during _expand_functional_group operation")
-
         mol = mol_w.GetMol()
     else:
         smiles = Chem.MolToSmiles(mol)
@@ -671,18 +676,27 @@ def _convert_graph_to_smiles(coords, symbols, edges, image=None, debug=False):
                 mol.GetBondBetweenAtoms(ids[i], ids[j]).SetBondDir(Chem.BondDir.BEGINDASH)
 
     pred_smiles = '<invalid>'
-
+    smiles = rdkit.Chem.MolToSmiles(mol, isomericSmiles=True, canonical=True)
+    #print(f"initial_SMILES: {smiles}")
     try:
         # TODO: move to an util function
         if image is not None:
             height, width, _ = image.shape
             ratio = width / height
             coords = [[x * ratio * 10, y * 10] for x, y in coords]
+        
         mol = _verify_chirality(mol, coords, symbols, edges, debug)
+        smiles1 = Chem.MolToSmiles(mol, isomericSmiles=True, canonical=True)
+        #print(f"after_chirality_SMILES: {smiles1}")
         # molblock is obtained before expanding func groups, otherwise the expanded group won't have coordinates.
         # TODO: make sure molblock has the abbreviation information
         pred_molblock = Chem.MolToMolBlock(mol)
         pred_smiles, mol = _expand_functional_group(mol, {}, debug)
+        #print(f"after_expansion_SMILES: {pred_smiles}")
+        pred_smiles = align_chirality(smiles1, pred_smiles)
+        #print(f"final_SMILES: {pred_smiles}\n")
+        mol = Chem.MolFromSmiles(pred_smiles)
+        pred_molblock = Chem.MolToMolBlock(mol)
         success = True
     except Exception as e:
         if debug:
@@ -696,11 +710,18 @@ def _convert_graph_to_smiles(coords, symbols, edges, image=None, debug=False):
 
 
 def convert_graph_to_smiles(coords, symbols, edges, images=None, num_workers=16):
-    with multiprocessing.Pool(num_workers) as p:
-        if images is None:
-            results = p.starmap(_convert_graph_to_smiles, zip(coords, symbols, edges), chunksize=128)
-        else:
-            results = p.starmap(_convert_graph_to_smiles, zip(coords, symbols, edges, images), chunksize=128)
+    if images is None:
+        args_zip = zip(coords, symbols, edges)
+    else:
+        args_zip = zip(coords, symbols, edges, images)
+
+    if num_workers <= 1:
+        results = itertools.starmap(_convert_graph_to_smiles, args_zip)
+        results = list(results)
+    else:
+        with multiprocessing.Pool(num_workers) as p:
+            results = p.starmap(_convert_graph_to_smiles, args_zip, chunksize=128)
+
     smiles_list, molblock_list, success = zip(*results)
     r_success = np.mean(success)
     return smiles_list, molblock_list, r_success
@@ -711,15 +732,11 @@ def _postprocess_smiles(smiles, coords=None, symbols=None, edges=None, molblock=
         return '', False
     mol = None
     pred_molblock = ''
-
     try:
         pred_smiles = smiles
-        pred_smiles, mappings = (_replace_functional_group(pred_smiles))
-        #print('pred_smiles1:', pred_smiles)
+        pred_smiles, mappings = _replace_functional_group(pred_smiles)
         if coords is not None and symbols is not None and edges is not None:
             pred_smiles = pred_smiles.replace('@', '').replace('/', '').replace('\\', '')
-            #print('pred_smiles11', pred_smiles)
-            #print('mapping11', mappings)
             mol = Chem.RWMol(Chem.MolFromSmiles(pred_smiles, sanitize=False))
             mol = _verify_chirality(mol, coords, symbols, edges, debug)
         else:
@@ -728,7 +745,6 @@ def _postprocess_smiles(smiles, coords=None, symbols=None, edges=None, molblock=
         if molblock:
             pred_molblock = Chem.MolToMolBlock(mol)
         pred_smiles, mol = _expand_functional_group(mol, mappings)
-        #print('pred_smiles2:', pred_smiles)
         success = True
     except Exception as e:
         if debug:
@@ -770,4 +786,3 @@ def keep_main_molecule(smiles, num_workers=16):
     with multiprocessing.Pool(num_workers) as p:
         results = p.map(_keep_main_molecule, smiles, chunksize=128)
     return results
-

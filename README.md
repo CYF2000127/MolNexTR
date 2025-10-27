@@ -1,7 +1,7 @@
 # MolNexTR [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13857412.svg)](https://doi.org/10.5281/zenodo.13857412)
+This is the official code of the paper "MolNexTR: a generalized deep learning model for molecular image recognition".
 
-
-## Highlights
+## :sparkles: Highlights
 <p align="justify">
 In this work, We propose MolNexTR, a novel graph generation model. The model follows the encoder-decoder architecture, takes three-channel molecular images as input, outputs molecular graph structure prediction, and can be easily converted to SMILES. We aim to enhance the robustness and generalization of the molecular structure recognition model by enhancing the feature extraction ability of the model and the augmentation strategy, to deal with any molecular images that may appear in the real literature.
 
@@ -41,7 +41,7 @@ print(predictions)
 ```
 or use [`prediction.ipynb`](prediction.ipynb). You can also change the image and model path to your images and models.
 
-The input is a molecular image 
+The input is a molecular image:
 ![visualization](examples/1.png)
 <div align="center",width="50">
 Example input molecular image.
@@ -69,7 +69,7 @@ The output dictionary includes the atom sets, bond sets, predicted MolFile, and 
 
 
 
-## Experiments
+## :fire: Experiments
 
 ### Data preparation
 For training and inference, please download the following datasets to your own path.
@@ -118,3 +118,18 @@ Qualitative results of our method on ACS.
 Qualitative results of our method on some hand-drawn molecular images.
 </div> 
 
+## ✅ Citation
+Chen, Yufan, et al. "MolNexTR: a generalized deep learning model for molecular image recognition." Journal of Cheminformatics 16.1 (2024): 141.
+
+```bibtex
+@article{chen2024molnextr,
+  title={MolNexTR: a generalized deep learning model for molecular image recognition},
+  author={Chen, Yufan and Leung, Ching Ting and Huang, Yong and Sun, Jianwei and Chen, Hao and Gao, Hanyu},
+  journal={Journal of Cheminformatics},
+  volume={16},
+  number={1},
+  pages={141},
+  year={2024},
+  publisher={Springer}
+}
+```
