@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from scipy.optimize import linear_sum_assignment
-from .tokenization import PAD_ID, MASK, MASK_ID
+from MolNexTR.tokenization import PAD_ID, MASK, MASK_ID
 
 class GraphLoss(nn.Module):
     """
