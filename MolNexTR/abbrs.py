@@ -143,4 +143,4 @@ COLORS = {
 
 # tokens of condensed formula
 FORMULA_REGEX = re.compile(
-    '(' + '|'.join(list(ABBREVIATIONS.keys())) + '|R[0-9]*|[A-Z][a-z]+|[A-Z]|[0-9]+|\(|\))')
+    '(?:' + '|'.join([re.escape(k) for k in ABBREVIATIONS.keys()]) + '|R[0-9]*|[A-Z][a-z]+|[A-Z]|[0-9]+|\(|\))')
