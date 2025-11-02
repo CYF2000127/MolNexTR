@@ -675,9 +675,10 @@ def _convert_graph_to_smiles(coords, symbols, edges, image=None, debug=False):
                 mol.AddBond(ids[i], ids[j], Chem.BondType.SINGLE)
                 mol.GetBondBetweenAtoms(ids[i], ids[j]).SetBondDir(Chem.BondDir.BEGINDASH)
 
-    pred_smiles = '<invalid>'
-    smiles = rdkit.Chem.MolToSmiles(mol, isomericSmiles=True, canonical=True)
-    #print(f"initial_SMILES: {smiles}")
+    try:
+        pred_smiles = rdkit.Chem.MolToSmiles(mol, isomericSmiles=True, canonical=True)
+    except Exception as e:
+        pred_smiles = '<invalid>'
     try:
         # TODO: move to an util function
         if image is not None:
