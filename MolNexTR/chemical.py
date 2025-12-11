@@ -5,6 +5,7 @@ import numpy as np
 import multiprocessing
 import rdkit
 import rdkit.Chem as Chem
+from rdkit.Chem import rdFMCS, rdDepictor
 rdkit.RDLogger.DisableLog('rdApp.*')
 from SmilesPE.pretokenizer import atomwise_tokenizer
 from MolNexTR.abbrs import RGROUP_SYMBOLS, ABBREVIATIONS, VALENCES, FORMULA_REGEX,SUBSTITUTIONS
