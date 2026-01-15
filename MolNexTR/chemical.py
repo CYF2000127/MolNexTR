@@ -546,85 +546,335 @@ def convert_smiles_to_mol(smiles):
 BOND_TYPES = {1: Chem.rdchem.BondType.SINGLE, 2: Chem.rdchem.BondType.DOUBLE, 3: Chem.rdchem.BondType.TRIPLE}
 
 
-def _expand_functional_group(mol, mappings, debug=False):
+def _num_swaps_to_interconvert(orders):
+    n = len(orders)
+    seen = [False] * n
+    nswaps = 0
+    for i in range(n):
+        if not seen[i]:
+            j = i
+            while orders[j] != i:
+                j = orders[j]
+                if j >= n:
+                    raise ValueError("_num_swaps_to_interconvert: index outside range")
+                seen[j] = True
+                nswaps += 1
+    return nswaps
+
+    
+def _expand_functional_group(mol, mappings, debug=True):
     def _need_expand(mol, mappings):
         return any([len(Chem.GetAtomAlias(atom)) > 0 for atom in mol.GetAtoms()]) or len(mappings) > 0
 
     if _need_expand(mol, mappings):
         mol_w = Chem.RWMol(mol)
         num_atoms = mol_w.GetNumAtoms()
-        for i, atom in enumerate(mol_w.GetAtoms()):  # reset radical electrons
+
+        # 重置所有原子的自由基电子
+        for atom in mol_w.GetAtoms():
             atom.SetNumRadicalElectrons(0)
 
         atoms_to_remove = []
+
         for i in range(num_atoms):
             atom = mol_w.GetAtomWithIdx(i)
-            if atom.GetSymbol() == '*':
-                symbol = Chem.GetAtomAlias(atom)
-                isotope = atom.GetIsotope()
-                if isotope > 0 and isotope in mappings:
-                    symbol = mappings[isotope]
-                if not (isinstance(symbol, str) and len(symbol) > 0):
+            if atom.GetSymbol() != '*':
+                continue
+
+            symbol = Chem.GetAtomAlias(atom)
+            isotope = atom.GetIsotope()
+            if isotope > 0 and isotope in mappings:
+                symbol = mappings[isotope]
+
+            if not (isinstance(symbol, str) and len(symbol) > 0):
+                continue
+
+            # R-group 标记（R1/R2 等）不展开
+            if symbol in RGROUP_SYMBOLS:
+                continue
+
+            bonds = atom.GetBonds()
+            sub_smiles = get_smiles_from_symbol(symbol, mol_w, atom, bonds)
+
+            # 从 SMILES 获得官能团分子
+            mol_r = convert_smiles_to_mol(sub_smiles)
+            if mol_r is None:
+                # 展不开就当普通 C 处理（或保持为 *，视你逻辑而定）
+                atom.SetIsotope(0)
+                continue
+
+            # ====== 记录原始键信息 & 可能受影响的手性中心 ======
+            bond_infos = []
+            chiral_centers_affected = set()
+            bonds_list = list(bonds)
+
+            for bond in bonds_list:
+                adj_idx = bond.GetOtherAtomIdx(i)
+                bond_infos.append(
+                    (
+                        adj_idx,
+                        int(round(bond.GetBondTypeAsDouble())),
+                        bond.GetBondDir()
+                    )
+                )
+                adj_atom = mol_w.GetAtomWithIdx(adj_idx)
+                if adj_atom.GetChiralTag() != Chem.rdchem.ChiralType.CHI_UNSPECIFIED:
+                    chiral_centers_affected.add(adj_idx)
+
+            # ====== 类 molzip_like：连接前标记手性中心邻居顺序 ======
+            chiral_mark_dict = {}  # {chiral_idx: mark_name}
+            for chiral_idx in chiral_centers_affected:
+                chiral_atom = mol_w.GetAtomWithIdx(chiral_idx)
+                tag = chiral_atom.GetChiralTag()
+                if tag not in (
+                    Chem.rdchem.ChiralType.CHI_TETRAHEDRAL_CW,
+                    Chem.rdchem.ChiralType.CHI_TETRAHEDRAL_CCW,
+                ):
                     continue
-                # rgroups do not need to be expanded
-                if symbol in RGROUP_SYMBOLS:
-                    continue
 
-                bonds = atom.GetBonds()
-                sub_smiles = get_smiles_from_symbol(symbol, mol_w, atom, bonds)
+                mark_name = f"__expand_chiral_mark_{chiral_idx}"
+                chiral_mark_dict[chiral_idx] = mark_name
 
-                # create mol object for abbreviation/condensed formula from its SMILES
-                mol_r = convert_smiles_to_mol(sub_smiles)
+                neighbors_before = list(chiral_atom.GetNeighbors())
+                order = 0
+                for nbr in neighbors_before:
+                    nbr.SetIntProp(mark_name, order)
+                    order += 1
 
-                if mol_r is None:
-                    # atom.SetAtomicNum(6)
-                    atom.SetIsotope(0)
-                    continue
+                if debug:
+                    print(f"  Marking neighbor order of chiral center {chiral_idx} (before expansion)")
+                    for idx_nb, nbr in enumerate(neighbors_before):
+                        if nbr.HasProp(mark_name):
+                            print(
+                                f"    Neighbor {nbr.GetIdx()}: order {nbr.GetIntProp(mark_name)} "
+                                f"(the {idx_nb}-th in GetNeighbors order)"
+                            )
 
-                # remove bonds connected to abbreviation/condensed formula
-                adjacent_indices = [bond.GetOtherAtomIdx(i) for bond in bonds]
-                for adjacent_idx in adjacent_indices:
-                    mol_w.RemoveBond(i, adjacent_idx)
+            if debug:
+                print(f"Expanding functional group {symbol} (atom {i})")
+                print(f"  bond_infos: {bond_infos}")
+                print(f"  chiral_centers_affected: {chiral_centers_affected}")
 
-                adjacent_atoms = [mol_w.GetAtomWithIdx(adjacent_idx) for adjacent_idx in adjacent_indices]
-                for adjacent_atom, bond in zip(adjacent_atoms, bonds):
-                    adjacent_atom.SetNumRadicalElectrons(int(bond.GetBondTypeAsDouble()))
+            # ====== 断开 * 与主体之间的所有键，并用自由基“记”键阶 ======
+            adjacent_indices = [bond.GetOtherAtomIdx(i) for bond in bonds_list]
+            for adjacent_idx in adjacent_indices:
+                mol_w.RemoveBond(i, adjacent_idx)
 
-                # get indices of atoms of main body that connect to substituent
-                bonding_atoms_w = adjacent_indices
-                # assume indices are concated after combine mol_w and mol_r
-                bonding_atoms_r = [mol_w.GetNumAtoms()]
+            adjacent_atoms = [mol_w.GetAtomWithIdx(adj_idx) for adj_idx in adjacent_indices]
+            for adjacent_atom, bond in zip(adjacent_atoms, bonds_list):
+                adjacent_atom.SetNumRadicalElectrons(int(bond.GetBondTypeAsDouble()))
+
+            bonding_atoms_w = adjacent_indices  # 主体侧连接点
+
+            if debug:
+                print(f"  Main molecule connection points (bonding_atoms_w): {bonding_atoms_w}")
+
+            # ====== 分析 sub_smiles 中的连接点顺序（官能团侧） ======
+            sub_smiles_atoms = []
+            if sub_smiles:
+                try:
+                    temp_mol = Chem.MolFromSmiles(sub_smiles)
+                    if temp_mol:
+                        for atm in temp_mol.GetAtoms():
+                            if atm.GetNumRadicalElectrons() > 0:
+                                sub_smiles_atoms.append(atm.GetIdx())
+                        # 若 SMILES 起始原子没有自由基，而你约定第一个原子也是连接点，则补上
+                        if sub_smiles.startswith('*') or sub_smiles.startswith('['):
+                            first_atom = temp_mol.GetAtomWithIdx(0)
+                            if first_atom.GetNumRadicalElectrons() == 0 and 0 not in sub_smiles_atoms:
+                                sub_smiles_atoms.insert(0, 0)
+                except Exception as e:
+                    if debug:
+                        print(f"  Failed to parse sub_smiles: {e}")
+
+            bonding_atoms_r = []
+
+            # 方法 1：按 sub_smiles 中自由基顺序确定连接点
+            if sub_smiles and len(sub_smiles_atoms) > 0:
+                base_idx = mol_w.GetNumAtoms()
+                for star_idx in sub_smiles_atoms:
+                    # star_idx 是 mol_r 中的原子 index
+                    bonding_atoms_r.append(base_idx + star_idx)
+
+            # 方法 2：fallback：默认第一个原子是主连接点
+            if len(bonding_atoms_r) == 0:
+                base_idx = mol_w.GetNumAtoms()
+                bonding_atoms_r = [base_idx]
                 for atm in mol_r.GetAtoms():
                     if atm.GetNumRadicalElectrons() and atm.GetIdx() > 0:
-                        bonding_atoms_r.append(mol_w.GetNumAtoms() + atm.GetIdx())
+                        bonding_atoms_r.append(base_idx + atm.GetIdx())
 
-                # combine main body and substituent into a single molecule object
-                combo = Chem.CombineMols(mol_w, mol_r)
+            if debug:
+                print(f"  Functional group connection points (bonding_atoms_r estimated): {bonding_atoms_r}")
+                print(f"  sub_smiles: {sub_smiles}")
+                print(f"  sub_smiles_atoms: {sub_smiles_atoms}")
 
-                # connect substituent to main body with bonds
-                mol_w = Chem.RWMol(combo)
-                # if len(bonding_atoms_r) == 1:  # substituent uses one atom to bond to main body
-                for atm in bonding_atoms_w:
-                    bond_order = mol_w.GetAtomWithIdx(atm).GetNumRadicalElectrons()
-                    mol_w.AddBond(atm, bonding_atoms_r[0], order=BOND_TYPES[bond_order])
+            # ====== Combine 主体与官能团 ======
+            combo = Chem.CombineMols(mol_w, mol_r)
+            mol_w = Chem.RWMol(combo)
 
-                # reset radical electrons
-                for atm in bonding_atoms_w:
-                    mol_w.GetAtomWithIdx(atm).SetNumRadicalElectrons(0)
-                for atm in bonding_atoms_r:
-                    mol_w.GetAtomWithIdx(atm).SetNumRadicalElectrons(0)
-                atoms_to_remove.append(i)
+            # ====== 决定最终配对的 target_atoms（官能团侧连接点） ======
+            target_atoms = []
+            if len(bonding_atoms_r) == len(bonding_atoms_w):
+                target_atoms = bonding_atoms_r
+                if debug:
+                    print(f"  Connection points count matches, matching in order: {bonding_atoms_w} -> {target_atoms}")
+            elif len(bonding_atoms_r) >= len(bonding_atoms_w):
+                target_atoms = bonding_atoms_r[:len(bonding_atoms_w)]
+                if debug:
+                    print(f"  More functional group connection points, taking first {len(bonding_atoms_w)}: {target_atoms}")
+            else:
+                if bonding_atoms_r:
+                    target_atoms = bonding_atoms_r + [bonding_atoms_r[-1]] * (
+                        len(bonding_atoms_w) - len(bonding_atoms_r)
+                    )
+                else:
+                    # 极端 fallback：如果实在找不到，就用最后一个原子
+                    target_atoms = [mol_w.GetNumAtoms() - 1] * len(bonding_atoms_w)
+                if debug:
+                    print(f"  Fewer functional group connection points, repeating the last one: {target_atoms}")
 
-        # Remove atom in the end, otherwise the id will change
-        # Reverse the order and remove atoms with larger id first
-        atoms_to_remove.sort(reverse=True)
-        for i in atoms_to_remove:
-            mol_w.RemoveAtom(i)
-        smiles = Chem.MolToSmiles(mol_w)
+            # ====== 加键 + 继承方向 + 传递手性标记 ======
+            for info, target_idx in zip(bond_infos, target_atoms):
+                adj_idx, order_val, bond_dir = info
+                order_val = max(1, min(3, order_val))
+                mol_w.GetAtomWithIdx(adj_idx).SetNumRadicalElectrons(order_val)
+
+                # 避免重复加键
+                existing_bond = mol_w.GetBondBetweenAtoms(adj_idx, target_idx)
+                if existing_bond is None:
+                    mol_w.AddBond(
+                        adj_idx,
+                        target_idx,
+                        order=BOND_TYPES.get(order_val, Chem.rdchem.BondType.SINGLE),
+                    )
+
+                new_bond = mol_w.GetBondBetweenAtoms(adj_idx, target_idx)
+                if new_bond is not None and bond_dir != Chem.BondDir.NONE:
+                    new_bond.SetBondDir(bond_dir)
+
+                # ====== 核心修正：从 dummy(*) 继承手性邻居顺序标记 ======
+                # i 是当前正在展开的 '*' 原子索引
+                dummy_atom = mol_w.GetAtomWithIdx(i)
+                for chiral_idx, mark_name in chiral_mark_dict.items():
+                    if dummy_atom.HasProp(mark_name):
+                        adj_order = dummy_atom.GetIntProp(mark_name)
+                        target_atom = mol_w.GetAtomWithIdx(target_idx)
+                        target_atom.SetIntProp(mark_name, adj_order)
+                        if debug:
+                            print(
+                                f"  Transferring mark: dummy atom {i} (order {adj_order}, chiral center {chiral_idx})"
+                                f" -> new atom {target_idx}"
+                            )
+
+            # ====== 连接后恢复手性（和 molzip_like 相同思想） ======
+            for chiral_idx in chiral_centers_affected:
+                if chiral_idx not in chiral_mark_dict:
+                    continue
+
+                mark_name = chiral_mark_dict[chiral_idx]
+                chiral_atom = mol_w.GetAtomWithIdx(chiral_idx)
+                tag = chiral_atom.GetChiralTag()
+
+                if tag not in (
+                    Chem.rdchem.ChiralType.CHI_TETRAHEDRAL_CW,
+                    Chem.rdchem.ChiralType.CHI_TETRAHEDRAL_CCW,
+                ):
+                    continue
+
+                neighbors_after = list(chiral_atom.GetNeighbors())
+                orders_after = []
+                all_have_mark = True
+                for nbr in neighbors_after:
+                    if not nbr.HasProp(mark_name):
+                        all_have_mark = False
+                        break
+                    orders_after.append(nbr.GetIntProp(mark_name))
+
+                if all_have_mark and len(orders_after) > 0:
+                    if debug:
+                        print(f"  Chiral center {chiral_idx}: neighbor order after connection {orders_after}")
+                    try:
+                        if set(orders_after) == set(range(len(orders_after))):
+                            nswaps = _num_swaps_to_interconvert(orders_after)
+                            if debug:
+                                print(f"  Number of swaps: {nswaps}")
+                            if nswaps % 2 == 1:
+                                if tag == Chem.rdchem.ChiralType.CHI_TETRAHEDRAL_CW:
+                                    chiral_atom.SetChiralTag(
+                                        Chem.rdchem.ChiralType.CHI_TETRAHEDRAL_CCW
+                                    )
+                                    if debug:
+                                        print(f"  Flipping chiral center {chiral_idx}: CW -> CCW")
+                                elif tag == Chem.rdchem.ChiralType.CHI_TETRAHEDRAL_CCW:
+                                    chiral_atom.SetChiralTag(
+                                        Chem.rdchem.ChiralType.CHI_TETRAHEDRAL_CW
+                                    )
+                                    if debug:
+                                        print(f"  Flipping chiral center {chiral_idx}: CCW -> CW")
+                        else:
+                            if debug:
+                                print(
+                                    f"  Warning: Neighbor marks of chiral center {chiral_idx} are not a valid permutation: {orders_after}"
+                                )
+                    except Exception as e:
+                        if debug:
+                            print(f"  Error calculating number of swaps (chiral center {chiral_idx}): {e}")
+                else:
+                    if debug:
+                        missing = [
+                            nbr.GetIdx()
+                            for nbr in neighbors_after
+                            if not nbr.HasProp(mark_name)
+                        ]
+                        print(
+                            f"  Chiral center {chiral_idx}: Some neighbors lack marks, cannot determine chirality change (neighbors missing marks: {missing})"
+                        )
+
+            # 清除临时自由基
+            for atm_idx in bonding_atoms_w:
+                mol_w.GetAtomWithIdx(atm_idx).SetNumRadicalElectrons(0)
+            for atm_idx in bonding_atoms_r:
+                if 0 <= atm_idx < mol_w.GetNumAtoms():
+                    mol_w.GetAtomWithIdx(atm_idx).SetNumRadicalElectrons(0)
+
+            # 局部 sanitize（不强制重算立体化学）
+            try:
+                Chem.SanitizeMol(mol_w)
+            except Exception as e:
+                if debug:
+                    print(f"Warning: Failed to sanitize after expanding {symbol}: {e}")
+
+            # 记录要删除的 '*' 原子
+            atoms_to_remove.append(i)
+
+        # ====== 删除所有 * 原子（从大 index 开始） ======
+        atoms_to_remove = sorted(set(atoms_to_remove), reverse=True)
+        for idx in atoms_to_remove:
+            if idx < mol_w.GetNumAtoms():
+                mol_w.RemoveAtom(idx)
+
+        # 清理临时手性标记属性
+        for atom in mol_w.GetAtoms():
+            for prop in list(atom.GetPropNames()):
+                if prop.startswith("__expand_chiral_mark"):
+                    atom.ClearProp(prop)
+
+        # 最终 sanitize
+        try:
+            Chem.SanitizeMol(mol_w)
+        except Exception as e:
+            if debug:
+                print("Warning: Failed to final sanitize after expanding functional groups:", e)
+
+        smiles = Chem.MolToSmiles(mol_w, isomericSmiles=True)
         mol = mol_w.GetMol()
     else:
-        smiles = Chem.MolToSmiles(mol)
+        smiles = Chem.MolToSmiles(mol, isomericSmiles=True)
+        mol = mol
+
     return smiles, mol
+
 
 
 def _convert_graph_to_smiles(coords, symbols, edges, image=None, debug=False):
@@ -693,9 +943,6 @@ def _convert_graph_to_smiles(coords, symbols, edges, image=None, debug=False):
         # TODO: make sure molblock has the abbreviation information
         pred_molblock = Chem.MolToMolBlock(mol)
         pred_smiles, mol = _expand_functional_group(mol, {}, debug)
-        #print(f"after_expansion_SMILES: {pred_smiles}")
-        pred_smiles = align_chirality(smiles1, pred_smiles)
-        #print(f"final_SMILES: {pred_smiles}\n")
         mol = Chem.MolFromSmiles(pred_smiles)
         pred_molblock = Chem.MolToMolBlock(mol)
         success = True
